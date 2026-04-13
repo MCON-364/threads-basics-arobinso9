@@ -1,0 +1,14 @@
+{
+  "tests": [
+    {
+      "name": "mvn test",
+      "setup": "",
+      "run": "mvn -B -ntp test",
+      "input": "",
+      "output": "",
+      "comparison": "included",
+      "timeout": 10,
+      "points": 100
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+name: GitHub Classroom Workflow
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  autograding:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Copy instructor tests
+        run: |
+          mkdir -p src/test/java/edu/touro/mcon364/concurrency/lesson1/exercises
+          mkdir -p src/test/java/edu/touro/mcon364/concurrency/lesson1/homework
+          cp .github/tests/ThreadSafeTaskCounterTest.java src/test/java/edu/touro/mcon364/concurrency/lesson1/exercises/
+          cp .github/tests/TaskRegistryTest.java src/test/java/edu/touro/mcon364/concurrency/lesson1/homework/
+
+      - name: Run tests
+        id: run-tests
+        run: mvn -B -ntp test
+
+      - name: Autograding Reporter
+        uses: education/autograding-grading-reporter@v1
+        if: always()
+        env:
+          RUN-TESTS_RESULTS: "${{steps.run-tests.outcome}}"
+        with:
+          runners: run-tests

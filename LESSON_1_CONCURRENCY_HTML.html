@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lesson 1 - Threads, Shared Collections, and Race Conditions</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --ink: #18212f;
+      --muted: #5b677a;
+      --brand: #7a0019;
+      --brand-2: #9f1239;
+      --blue: #2563eb;
+      --green: #15803d;
+      --amber: #b45309;
+      --purple: #7c3aed;
+      --line: #dbe3ee;
+      --soft: #eef4ff;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(37,99,235,0.08), transparent 26%),
+        radial-gradient(circle at top left, rgba(124,58,237,0.08), transparent 22%),
+        linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%);
+      line-height: 1.65;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(10px);
+      background: rgba(255,255,255,0.86);
+      border-bottom: 1px solid rgba(219,227,238,0.8);
+    }
+
+    .topbar-inner,
+    .container {
+      width: min(1160px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 0;
+    }
+
+    .brandmark {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      color: var(--brand);
+    }
+
+    .brandmark svg {
+      width: 36px;
+      height: 36px;
+      flex: 0 0 auto;
+    }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      padding: 7px 10px;
+      border-radius: 999px;
+      transition: 0.2s ease;
+    }
+
+    nav a:hover {
+      background: #f2f6fc;
+      color: var(--brand);
+    }
+
+    .hero {
+      padding: 34px 0 24px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.9fr;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .hero-card,
+    .panel,
+    .info-card,
+    .timeline-card,
+    .quiz-card,
+    .demo-card,
+    details {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 28px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--brand-2);
+      background: #fff1f5;
+      border: 1px solid #ffd4df;
+      padding: 7px 12px;
+      border-radius: 999px;
+    }
+
+    h1, h2, h3 { line-height: 1.18; }
+    h1 {
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      margin: 14px 0 14px;
+      color: var(--brand);
+    }
+
+    h2 {
+      font-size: clamp(1.5rem, 2.4vw, 2rem);
+      margin: 0 0 16px;
+      color: var(--brand);
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      margin: 0 0 8px;
+      color: #11213d;
+    }
+
+    p { margin: 0 0 14px; }
+    .lead {
+      font-size: 1.08rem;
+      color: #334155;
+      max-width: 60ch;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .pill-btn,
+    button.inline-btn {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      border-radius: 999px;
+      font-weight: 700;
+      padding: 11px 16px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+    }
+
+    .pill-btn {
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: #fff;
+      text-decoration: none;
+      box-shadow: 0 8px 20px rgba(159, 18, 57, 0.22);
+    }
+
+    .pill-btn.secondary {
+      background: #eff6ff;
+      color: var(--blue);
+      box-shadow: none;
+      border: 1px solid #cfe0ff;
+    }
+
+    .pill-btn:hover,
+    button.inline-btn:hover { transform: translateY(-1px); }
+
+    .hero-visual {
+      padding: 22px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .metric {
+      background: #f8fbff;
+      border: 1px solid #d9e8ff;
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 1.5rem;
+      color: var(--blue);
+    }
+
+    .metric span {
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    section {
+      margin: 22px 0 28px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .section-head p {
+      color: var(--muted);
+      max-width: 58ch;
+    }
+
+    .grid-2,
+    .grid-3,
+    .comparison-grid,
+    .lesson-end-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .comparison-grid { grid-template-columns: 1fr 1fr; }
+    .lesson-end-grid { grid-template-columns: 1.1fr 0.9fr; }
+
+    .info-card,
+    .timeline-card,
+    .quiz-card,
+    .demo-card,
+    .panel {
+      padding: 22px;
+    }
+
+    .info-card .icon,
+    .timeline-card .icon,
+    .quiz-card .icon,
+    .demo-card .icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: inline-grid;
+      place-items: center;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+      border: 1px solid #dae6ff;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .tag {
+      font-size: 0.85rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      color: var(--muted);
+    }
+
+    .story-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .story-box {
+      padding: 16px;
+      border-radius: 16px;
+      background: #ffffff ;
+      border: 1px solid var(--line);
+      min-height: 148px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .story-box::after {
+      content: "";
+      position: absolute;
+      inset: auto -12px -12px auto;
+      width: 84px;
+      height: 84px;
+      opacity: 0.14;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--blue), transparent 5%);
+    }
+
+    .story-box strong {
+      display: block;
+      color: var(--brand);
+      margin-bottom: 8px;
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 28px;
+      margin: 0;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 10px;
+      top: 4px;
+      bottom: 4px;
+      width: 2px;
+      background: linear-gradient(180deg, #bfdbfe, #c4b5fd);
+    }
+
+    .timeline li {
+      list-style: none;
+      position: relative;
+      margin: 0 0 18px;
+      padding-left: 12px;
+    }
+
+    .timeline li::before {
+      content: "";
+      position: absolute;
+      left: -22px;
+      top: 7px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid var(--blue);
+      box-shadow: 0 0 0 4px #eff6ff;
+    }
+
+    .callout {
+      border-radius: 18px;
+      padding: 18px 20px;
+      border: 1px solid;
+      margin: 14px 0 0;
+    }
+
+    .callout.note { background: #f0f7ff; border-color: #cfe0ff; }
+    .callout.warn { background: #fff7ed; border-color: #fed7aa; }
+    .callout.good { background: #f0fdf4; border-color: #bbf7d0; }
+
+    .thread-stage {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .stage {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: #fbfdff;
+    }
+
+    .stage small {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .thread-pill {
+      display: inline-block;
+      padding: 6px 9px;
+      border-radius: 999px;
+      margin: 4px 6px 0 0;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .thread-a { background: var(--blue); }
+    .thread-b { background: var(--purple); }
+    .thread-c { background: var(--green); }
+
+    pre {
+      margin: 0;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 18px;
+      border-radius: 16px;
+      overflow-x: auto;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+      font-size: 0.95rem;
+    }
+
+    code { font-family: "SFMono-Regular", Consolas, Monaco, monospace; }
+
+    .code-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .code-tab {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      padding: 8px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .code-tab.active {
+      background: #eef4ff;
+      color: var(--blue);
+      border-color: #bfdbfe;
+    }
+
+    .code-panel { display: none; }
+    .code-panel.active { display: block; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+    }
+
+    th, td {
+      text-align: left;
+      padding: 14px;
+      border-bottom: 1px solid #e9eef5;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #243247;
+      font-size: 0.95rem;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    details {
+      padding: 16px 18px;
+      margin-bottom: 12px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 800;
+      color: #11213d;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: "+";
+      font-size: 1.4rem;
+      color: var(--blue);
+    }
+
+    details[open] summary::after { content: "–"; }
+
+    .sim-shell {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+      background: linear-gradient(180deg, #fbfdff, #f7fbff);
+    }
+
+    .sim-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .sim-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .counter-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin: 12px 0 14px;
+    }
+
+    .counter-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .counter-card strong {
+      display: block;
+      font-size: 1.7rem;
+      color: var(--brand);
+    }
+
+    .log {
+      background: #0f172a;
+      color: #dbeafe;
+      border-radius: 16px;
+      padding: 16px;
+      min-height: 160px;
+      max-height: 220px;
+      overflow: auto;
+      font-family: "SFMono-Regular", Consolas, Monaco, monospace;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    }
+
+    .flow-graphic {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+      background: linear-gradient(180deg, #fff, #f8fbff);
+    }
+
+    .flow-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      align-items: center;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .flow-node {
+      padding: 14px 10px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: #fff;
+      min-height: 88px;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+    }
+
+    .flow-arrow {
+      font-size: 1.5rem;
+      color: var(--blue);
+      font-weight: 900;
+    }
+
+    .mcq {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .mcq label {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .mcq-result {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 14px;
+      display: none;
+      font-weight: 700;
+    }
+
+    .mcq-result.show { display: block; }
+    .mcq-result.ok { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .mcq-result.nope { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+
+    .checklist {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .checklist li { margin-bottom: 8px; }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.95rem;
+      text-align: center;
+      margin: 34px 0 28px;
+    }
+
+    @media (max-width: 960px) {
+      .hero-grid,
+      .grid-2,
+      .grid-3,
+      .comparison-grid,
+      .lesson-end-grid,
+      .story-strip,
+      .counter-box,
+      .thread-stage,
+      .flow-row {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar-inner {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brandmark">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#7a0019"/>
+              <stop offset="100%" stop-color="#2563eb"/>
+            </linearGradient>
+          </defs>
+          <rect x="6" y="6" width="52" height="52" rx="16" fill="url(#g1)"/>
+          <path d="M20 22h9v20h-9zm15 0h9v20h-9z" fill="#fff" opacity="0.95"/>
+          <circle cx="24.5" cy="18" r="4" fill="#fff"/>
+          <circle cx="39.5" cy="46" r="4" fill="#fff"/>
+        </svg>
+        <div>
+          <div>Lesson 1</div>
+          <small style="color: var(--muted); font-weight: 600;">Threads • Shared State • Race Conditions</small>
+        </div>
+      </div>
+      <nav>
+        <a href="#agenda">Agenda</a>
+        <a href="#runnable">Runnable</a>
+        <a href="#threads">Threads</a>
+        <a href="#thread-class">Thread Class</a>
+        <a href="#race">Race Condition</a>
+        <a href="#simulation">Simulation</a>
+        <a href="#collections">Collections</a>
+        <a href="#exercises">Exercises</a>
+      </nav>
+    </div>
+  </div>
+
+  <main class="container">
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="hero-card">
+          <h1>Threads, Shared Collections, and Race Conditions</h1>
+          <p class="lead">In this lesson we will talk about multithreading and how to use data structures in a thread safe way. We will see why shared mutable state is dangerous, why plain collections can fail under concurrency, and how <code>synchronized</code> protects a critical section.</p>
+          <div class="hero-actions">
+            <a class="pill-btn" href="#agenda">Start the lesson</a>
+            <a class="pill-btn secondary" href="#simulation">Jump to live simulation</a>
+          </div>
+        </div>
+
+        <div class="hero-visual hero-card">
+          <svg viewBox="0 0 560 360" width="100%" role="img" aria-label="Illustration showing two threads contending over a shared counter">
+            <defs>
+              <linearGradient id="bgGlow" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#eff6ff"/>
+                <stop offset="100%" stop-color="#f5f3ff"/>
+              </linearGradient>
+              <linearGradient id="pipe" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#2563eb"/>
+                <stop offset="100%" stop-color="#7c3aed"/>
+              </linearGradient>
+            </defs>
+            <rect x="8" y="8" width="544" height="344" rx="28" fill="url(#bgGlow)" stroke="#dbe3ee"/>
+            <rect x="40" y="56" width="140" height="88" rx="20" fill="#ffffff" stroke="#cfe0ff"/>
+            <text x="110" y="90" text-anchor="middle" font-size="22" font-weight="700" fill="#2563eb">Thread A</text>
+            <text x="110" y="118" text-anchor="middle" font-size="16" fill="#475569">read count = 7</text>
+            <text x="110" y="138" text-anchor="middle" font-size="16" fill="#475569">write count = 8</text>
+
+            <rect x="380" y="56" width="140" height="88" rx="20" fill="#ffffff" stroke="#ddd6fe"/>
+            <text x="450" y="90" text-anchor="middle" font-size="22" font-weight="700" fill="#7c3aed">Thread B</text>
+            <text x="450" y="118" text-anchor="middle" font-size="16" fill="#475569">read count = 7</text>
+            <text x="450" y="138" text-anchor="middle" font-size="16" fill="#475569">write count = 8</text>
+
+            <rect x="186" y="204" width="188" height="94" rx="24" fill="#ffffff" stroke="#fbcfe8"/>
+            <text x="280" y="238" text-anchor="middle" font-size="20" font-weight="700" fill="#9f1239">Shared Counter</text>
+            <text x="280" y="276" text-anchor="middle" font-size="42" font-weight="800" fill="#7a0019">8</text>
+
+            <path d="M180 100 C220 100, 210 204, 260 204" fill="none" stroke="url(#pipe)" stroke-width="12" stroke-linecap="round"/>
+            <path d="M380 100 C340 100, 350 204, 300 204" fill="none" stroke="url(#pipe)" stroke-width="12" stroke-linecap="round"/>
+
+            <text x="280" y="328" text-anchor="middle" font-size="18" font-weight="700" fill="#b45309">Expected 9, but one increment was lost</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+      <section>
+      <div class="info-card">
+        <div class="icon">🎯</div>
+        <h3>Lesson objectives</h3>
+        <ul class="checklist">
+          <li>Define a thread and explain shared mutable state.</li>
+          <li>Describe why <code>counter++</code> is not atomic.</li>
+          <li>Identify a race condition in code using a shared collection.</li>
+          <li>Use <code>synchronized</code> to protect a critical section.</li>
+          <li>Connect concurrency choices back to data structure choices.</li>
+        </ul>
+        <div class="tag-row">
+          <span class="tag">Thread basics</span>
+          <span class="tag">Race conditions</span>
+          <span class="tag">Synchronization</span>
+          <span class="tag">Collections</span>
+        </div>
+      </div>
+      </div>
+      </section>
+
+
+    <section id="agenda">
+      <div class="section-head">
+        <div>
+          <h2>Agenda</h2>
+          <p>Here’s the roadmap for the lesson. We will start with the basics of threads and shared state, then dive into the race condition incrementing a counter, and finish with a live simulation and connection to collections.</p>
+      </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Why should I care</h2>
+          <p>Concurrency as a practical problem rather than an abstract one. Below are real life scenarios where not using concurrency correctly with have catastrophic results</p>
+        </div>
+      </div>
+      <div class="story-strip">
+        <div class="story-box">
+          <strong>Web server</strong>
+          One request adds an item to a cart while another updates inventory. Shared state must stay correct.
+        </div>
+        <div class="story-box">
+          <strong>Task scheduler</strong>
+          Many worker threads pull work from a queue. Priority and order matter.
+        </div>
+        <div class="story-box">
+          <strong>Background jobs</strong>
+          A reporting system aggregates data while new updates continue to arrive.
+        </div>
+        <div class="story-box">
+          <strong>UI + background work</strong>
+          The interface stays responsive while another thread loads data or saves files.
+        </div>
+      </div>
+      <div class="callout note"> You already know data structures. Concurrency raises the next question: what happens when more than one actor touches the same structure at the same time?</div>
+    </section>
+
+    <section id="runnable">
+      <div class="section-head">
+        <div>
+          <h2>The <code>Runnable</code> interface</h2>
+          <p>Before looking at threads themselves it helps to understand what a thread actually <em>runs</em>. That unit of work is described by <code>java.lang.Runnable</code> — one of the oldest and most important interfaces in Java.</p>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:18px;">
+
+        <!-- What it is -->
+        <div class="panel">
+          <div class="icon">🔷</div>
+          <h3>What <code>Runnable</code> is</h3>
+          <p><code>Runnable</code> is a <strong>functional interface</strong> — it has exactly one abstract method:</p>
+<pre><code>@FunctionalInterface
+public interface Runnable {
+    void run();
+}</code></pre>
+          <p style="margin-top:12px;">The <code>@FunctionalInterface</code> annotation is a compile-time guard: if someone accidentally adds a second abstract method the compiler refuses to build. It also signals to readers that this interface is safe to use with lambda expressions and method references.</p>
+          <div class="callout note" style="margin-top:14px;">
+            <strong>One rule:</strong> <code>run()</code> takes no arguments and returns nothing. All inputs must come in through the enclosing scope (captured variables must be effectively final).
+          </div>
+        </div>
+
+        <!-- Four equivalent spellings -->
+        <div class="panel">
+          <div class="icon">✏️</div>
+          <h3>Four equivalent ways to write a <code>Runnable</code></h3>
+          <div class="code-tabs">
+            <button class="code-tab active" data-tab="r-anon">Anonymous class</button>
+            <button class="code-tab" data-tab="r-lambda">Lambda</button>
+            <button class="code-tab" data-tab="r-mref">Method ref</button>
+            <button class="code-tab" data-tab="r-named">Named class</button>
+          </div>
+          <div class="code-panel active" id="r-anon">
+<pre><code>Runnable r = new Runnable() {
+    @Override
+    public void run() {
+        System.out.println("hello");
+    }
+};</code></pre>
+          </div>
+          <div class="code-panel" id="r-lambda">
+<pre><code>// Lambda — most common modern style
+Runnable r = () -> System.out.println("hello");</code></pre>
+          </div>
+          <div class="code-panel" id="r-mref">
+<pre><code>// Method reference — works when a static or
+// instance method matches the () -> void shape
+Runnable r = MyClass::doWork;</code></pre>
+          </div>
+          <div class="code-panel" id="r-named">
+<pre><code>class Greeter implements Runnable {
+    @Override
+    public void run() {
+        System.out.println("hello");
+    }
+}
+
+Runnable r = new Greeter();</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Why functional interface matters table -->
+      <h3 style="margin:0 0 12px;">Why "functional interface" matters</h3>
+      <table style="margin-bottom:18px;">
+        <thead>
+          <tr>
+            <th>Capability</th>
+            <th>What it means in practice</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Lambda expression</strong></td>
+            <td>Any <code>() -&gt; void</code> lambda can be assigned to a <code>Runnable</code> variable without boilerplate.</td>
+          </tr>
+          <tr>
+            <td><strong>Method reference</strong></td>
+            <td>Any zero-argument void method can be used directly: <code>Thread t = new Thread(obj::method)</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Works everywhere threads are accepted</strong></td>
+            <td><code>new Thread(r)</code>, <code>executor.submit(r)</code>, <code>CompletableFuture.runAsync(r)</code> — they all accept <code>Runnable</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Composable</strong></td>
+            <td>You can store, pass, and wrap <code>Runnable</code> objects just like any other value — useful for task queues and decorators.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Capturing variables callout -->
+      <div class="callout warn">
+        <strong>Captured variables must be effectively final.</strong> A lambda captures the <em>reference</em>, not a copy of a mutable variable. Mutating a captured variable from inside <code>run()</code> while another thread reads it is a data race — exactly the problem the rest of this lesson addresses.
+      </div>
+    </section>
+
+    <section id="threads">
+      <div class="section-head">
+        <div>
+          <h2>What is a thread?</h2>
+          <p>A process is a running program. A thread is one path of execution inside that process. A Java program can have many threads working at once.</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="icon">🧵</div>
+          <h3>Simple mental model</h3>
+          <p>Imagine a restaurant kitchen. One cook can only do one thing at a time. Several cooks can work in parallel, but they still share the same kitchen, same ingredients, and same order board.</p>
+          <div class="thread-stage">
+            <div class="stage">
+              <small>One process</small>
+              <span class="thread-pill thread-a">Main Thread</span>
+            </div>
+            <div class="stage">
+              <small>Many threads</small>
+              <span class="thread-pill thread-a">A</span>
+              <span class="thread-pill thread-b">B</span>
+              <span class="thread-pill thread-c">C</span>
+            </div>
+            <div class="stage">
+              <small>Shared kitchen</small>
+              counter, list, map, queue
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="code-tabs">
+            <button class="code-tab active" data-tab="thread-create">Create a thread</button>
+            <button class="code-tab" data-tab="shared-state">Shared state</button>
+          </div>
+          <div class="code-panel active" id="thread-create">
+<pre><code>Thread t = new Thread(() -&gt; {
+    System.out.println("Running in another thread");
+});
+
+t.start();</code></pre>
+          </div>
+          <div class="code-panel" id="shared-state">
+<pre><code>private int count = 0;
+
+public void increment() {
+    count++;
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="thread-class">
+      <div class="section-head">
+        <div>
+          <h2>The <code>Thread</code> class</h2>
+          <p>Java's built-in <code>java.lang.Thread</code> class is the foundation of every thread. It bundles the lifecycle management, scheduling hints, and the unit of work (a <code>Runnable</code>) into one object.</p>
+        </div>
+      </div>
+
+      <!-- Creation patterns -->
+      <div class="grid-2" style="margin-bottom:18px;">
+        <div class="panel">
+          <div class="icon">🏗️</div>
+          <h3>Two ways to create a thread</h3>
+          <div class="code-tabs">
+            <button class="code-tab active" data-tab="tc-extend">Extend Thread</button>
+            <button class="code-tab" data-tab="tc-runnable">Pass Runnable</button>
+          </div>
+          <div class="code-panel active" id="tc-extend">
+<pre><code>class MyThread extends Thread {
+    @Override
+    public void run() {
+        System.out.println("Hello from " + getName());
+    }
+}
+
+MyThread t = new MyThread();
+t.setName("worker-1");
+t.start();          // schedules the thread</code></pre>
+          </div>
+          <div class="code-panel" id="tc-runnable">
+<pre><code>Runnable task = () -&gt;
+    System.out.println("Hello from "
+        + Thread.currentThread().getName());
+
+Thread t = new Thread(task, "worker-1");
+t.start();          // schedules the thread</code></pre>
+          </div>
+          <div class="callout note" style="margin-top:14px;"><strong>Prefer the Runnable approach.</strong> It keeps the task logic decoupled from thread mechanics and is compatible with <code>ExecutorService</code>.</div>
+        </div>
+
+        <!-- Lifecycle diagram -->
+        <div class="panel">
+          <div class="icon">🔄</div>
+          <h3>Thread lifecycle</h3>
+          <p style="color:var(--muted);font-size:0.95rem;">A thread moves through states managed by the JVM and the OS scheduler.</p>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:5px 14px;font-weight:700;font-size:0.88rem;white-space:nowrap;">NEW</span>
+              <span style="color:var(--muted);font-size:0.92rem;">Created but <code>start()</code> not yet called.</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="background:#d1fae5;color:#065f46;border-radius:999px;padding:5px 14px;font-weight:700;font-size:0.88rem;white-space:nowrap;">RUNNABLE</span>
+              <span style="color:var(--muted);font-size:0.92rem;"><code>start()</code> called; running or waiting for CPU time.</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="background:#fef3c7;color:#92400e;border-radius:999px;padding:5px 14px;font-weight:700;font-size:0.88rem;white-space:nowrap;">BLOCKED</span>
+              <span style="color:var(--muted);font-size:0.92rem;">Waiting to acquire a <code>synchronized</code> lock.</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="background:#ede9fe;color:#5b21b6;border-radius:999px;padding:5px 14px;font-weight:700;font-size:0.88rem;white-space:nowrap;">WAITING</span>
+              <span style="color:var(--muted);font-size:0.92rem;">Waiting indefinitely via <code>wait()</code> or <code>join()</code>.</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="background:#fce7f3;color:#9d174d;border-radius:999px;padding:5px 14px;font-weight:700;font-size:0.88rem;white-space:nowrap;">TIMED_WAITING</span>
+              <span style="color:var(--muted);font-size:0.92rem;">Sleeping via <code>sleep(ms)</code> or <code>join(ms)</code>.</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="background:#f1f5f9;color:#475569;border-radius:999px;padding:5px 14px;font-weight:700;font-size:0.88rem;white-space:nowrap;">TERMINATED</span>
+              <span style="color:var(--muted);font-size:0.92rem;"><code>run()</code> has returned or an exception escaped.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Methods table -->
+      <h3 style="margin:0 0 12px;">Key methods</h3>
+      <table style="margin-bottom:18px;">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>What it does</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>start()</code></td>
+            <td>Registers the thread with the JVM scheduler and eventually calls <code>run()</code>.</td>
+            <td>Never call <code>run()</code> directly — that executes on the <em>current</em> thread, not a new one.</td>
+          </tr>
+          <tr>
+            <td><code>run()</code></td>
+            <td>Contains the code to execute in the new thread. Override it or supply a <code>Runnable</code>.</td>
+            <td>Called by the JVM after <code>start()</code>; do not call it yourself.</td>
+          </tr>
+          <tr>
+            <td><code>sleep(long ms)</code></td>
+            <td>Pauses the <em>current</em> thread for at least the given milliseconds.</td>
+            <td>Static method. Does <strong>not</strong> release any held locks. Throws <code>InterruptedException</code>.</td>
+          </tr>
+          <tr>
+            <td><code>join()</code></td>
+            <td>Blocks the calling thread until this thread finishes.</td>
+            <td>Useful for waiting on results. Optional timeout overload: <code>join(long ms)</code>.</td>
+          </tr>
+          <tr>
+            <td><code>interrupt()</code></td>
+            <td>Sets the interrupt flag on the thread.</td>
+            <td>Causes a sleeping/waiting thread to throw <code>InterruptedException</code>; a running thread must check <code>isInterrupted()</code>.</td>
+          </tr>
+          <tr>
+            <td><code>isInterrupted()</code></td>
+            <td>Returns <code>true</code> if the thread's interrupt flag is set.</td>
+            <td>Does <em>not</em> clear the flag. Use inside long-running loops to respond to cancellation.</td>
+          </tr>
+          <tr>
+            <td><code>isAlive()</code></td>
+            <td>Returns <code>true</code> if the thread has been started and has not yet terminated.</td>
+            <td>Useful for quick liveness checks before calling <code>join()</code>.</td>
+          </tr>
+          <tr>
+            <td><code>Thread.currentThread()</code></td>
+            <td>Static factory that returns a reference to the thread currently executing the call.</td>
+            <td>Works from any context — handy for logging the thread name inside a <code>Runnable</code>.</td>
+          </tr>
+          <tr>
+            <td><code>getState()</code></td>
+            <td>Returns the current <code>Thread.State</code> enum value.</td>
+            <td>Values: <code>NEW</code>, <code>RUNNABLE</code>, <code>BLOCKED</code>, <code>WAITING</code>, <code>TIMED_WAITING</code>, <code>TERMINATED</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Fields / properties table -->
+      <h3 style="margin:0 0 12px;">Key fields &amp; properties</h3>
+      <table style="margin-bottom:18px;">
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Getter / Setter</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Name</strong></td>
+            <td><code>getName()</code> / <code>setName(String)</code></td>
+            <td>Human-readable label for the thread. Invaluable in logs and stack traces.</td>
+          </tr>
+          <tr>
+            <td><strong>Priority</strong></td>
+            <td><code>getPriority()</code> / <code>setPriority(int)</code></td>
+            <td>Hint to the OS scheduler. Range: <code>MIN_PRIORITY</code> (1) → <code>NORM_PRIORITY</code> (5) → <code>MAX_PRIORITY</code> (10). Not a guarantee.</td>
+          </tr>
+          <tr>
+            <td><strong>Daemon flag</strong></td>
+            <td><code>isDaemon()</code> / <code>setDaemon(boolean)</code></td>
+            <td>Daemon threads are silently killed when all non-daemon threads finish. Must be set <em>before</em> <code>start()</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>ID</strong></td>
+            <td><code>getId()</code></td>
+            <td>A unique positive long assigned by the JVM. Read-only; useful for logging.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Quick example with sleep + join -->
+      <div class="panel">
+        <div class="icon">💡</div>
+        <h3>Putting it together — <code>sleep</code>, <code>join</code>, and naming</h3>
+<pre><code>Thread worker = new Thread(() -&gt; {
+    System.out.println(Thread.currentThread().getName() + " starting");
+    try {
+        Thread.sleep(500);           // pause for 500 ms
+    } catch (InterruptedException e) {
+        Thread.currentThread().interrupt(); // restore flag
+    }
+    System.out.println(Thread.currentThread().getName() + " done");
+}, "background-worker");
+
+worker.setDaemon(false);   // keep JVM alive until this thread finishes
+worker.setPriority(Thread.NORM_PRIORITY);
+worker.start();
+
+System.out.println("Main thread continuing...");
+worker.join();             // wait for worker to finish
+System.out.println("All done");</code></pre>
+        <div class="callout good" style="margin-top:14px;"><strong>Always restore the interrupt flag</strong> after catching <code>InterruptedException</code> so that callers higher up the stack can still detect the cancellation.</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Shared mutable state</h2>
+          <p>If multiple threads can access a value and at least one of them can change it, that value is shared mutable state.</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Shared thing</th>
+            <th>Why it is risky</th>
+            <th>Common symptom</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>int counter</code></td>
+            <td>Increment is not one indivisible step.</td>
+            <td>Lost updates</td>
+          </tr>
+          <tr>
+            <td><code>ArrayList&lt;Task&gt;</code></td>
+            <td>Concurrent structural changes are unsafe.</td>
+            <td>Wrong size, inconsistent contents, occasional exceptions</td>
+          </tr>
+          <tr>
+            <td><code>HashMap&lt;K,V&gt;</code></td>
+            <td>Simultaneous reads and writes may produce inconsistent behavior.</td>
+            <td>Missing or stale values</td>
+          </tr>
+          <tr>
+            <td><code>PriorityQueue&lt;Task&gt;</code></td>
+            <td>Ordering logic is fine, but the queue itself is not thread-safe.</td>
+            <td>Broken scheduling under concurrent access</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout warn"><strong>Important:</strong> “It worked when I ran it” is not evidence that the program is correct. Race-condition bugs often hide until timing changes.</div>
+    </section>
+
+    <section id="race">
+      <div class="section-head">
+        <div>
+          <h2>Why <code>counter++</code> is dangerous</h2>
+          <p>This is the central idea to slow down on. People usually assume <code>counter++</code> is one operation. It is not.</p>
+        </div>
+      </div>
+
+      <div class="comparison-grid">
+        <div class="flow-graphic">
+          <h3>The hidden steps</h3>
+          <div class="flow-row">
+            <div class="flow-node">Read<br><span style="font-weight: 500; color: var(--muted);">get current value</span></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">Compute<br><span style="font-weight: 500; color: var(--muted);">add 1</span></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">Write<br><span style="font-weight: 500; color: var(--muted);">store new value</span></div>
+          </div>
+          <div class="callout note"><strong>Atomic</strong> means the operation behaves like one indivisible step. Plain <code>count++</code> is not atomic.</div>
+        </div>
+
+        <div class="panel">
+<pre><code>// Thread A reads 7
+// Thread B reads 7
+// Thread A writes 8
+// Thread B writes 8
+
+// Final value = 8
+// Expected value = 9</code></pre>
+          <p style="margin-top: 14px;">Both threads did real work, but one update disappeared because both started from the same old value.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="simulation">
+      <div class="section-head">
+        <div>
+          <h2>Live  simulation</h2>
+          <p> Click the buttons and try to predict the result before the log appears.</p>
+        </div>
+      </div>
+
+      <div class="demo-card sim-shell">
+        <div class="sim-header">
+          <div>
+            <h3 style="margin-bottom: 6px;">Race condition simulator</h3>
+            <p style="margin: 0; color: var(--muted);">Unsafe run lets both threads read before either writes. Safe run lets one thread finish before the other starts the critical section.</p>
+          </div>
+          <div class="sim-controls">
+            <button class="inline-btn pill-btn" id="unsafeRunBtn">Run unsafe</button>
+            <button class="inline-btn pill-btn secondary" id="safeRunBtn">Run safe</button>
+            <button class="inline-btn pill-btn secondary" id="resetRunBtn">Reset</button>
+          </div>
+        </div>
+
+        <div class="counter-box">
+          <div class="counter-card"><span>Expected final value</span><strong id="expectedVal">9</strong></div>
+          <div class="counter-card"><span>Actual final value</span><strong id="actualVal">7</strong></div>
+          <div class="counter-card"><span>State</span><strong id="stateVal">Ready</strong></div>
+        </div>
+
+        <div class="log" id="simLog">Counter starts at 7.
+Click “Run unsafe” or “Run safe”.</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Fixing the problem with <code>synchronized</code></h2>
+          <p>The simplest correct fix at this stage is to protect the critical section so that only one thread enters it at a time.</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+<pre><code>public synchronized void increment() {
+    count++;
+}</code></pre>
+          <div class="callout good" style="margin-top: 14px;"><strong>Meaning:</strong> on the same object, only one thread at a time can execute this synchronized method.</div>
+        </div>
+        <div class="panel">
+          <h3>Critical section</h3>
+          <p>A critical section is the part of code that touches shared mutable state and must not be interleaved in the wrong way with another thread doing the same thing.</p>
+          <ul class="checklist">
+            <li>Keep it as small as possible.</li>
+            <li>Protect the read-modify-write sequence together.</li>
+            <li>Do not lock more code than you need.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="collections">
+      <div class="section-head">
+        <div>
+          <h2>Connecting concurrency back to collections</h2>
+          <p>This course is still about data structures. Multithreading changes not only how we write code, but which structure we should trust in a concurrent setting.</p>
+        </div>
+      </div>
+
+      <div class="comparison-grid">
+        <div class="panel">
+          <h3>Unsafe collection example</h3>
+<pre><code>List&lt;Task&gt; tasks = new ArrayList&lt;&gt;();
+
+tasks.add(new Task("T-1", Priority.HIGH));
+// another thread also mutates the same list</code></pre>
+          <p style="margin-top: 14px;">An <code>ArrayList</code> is great for many single-threaded use cases. It is not built for many threads mutating it at once.</p>
+        </div>
+        <div class="panel">
+          <h3>Safer intro-level option</h3>
+<pre><code>List&lt;Task&gt; tasks = Collections.synchronizedList(
+    new ArrayList&lt;&gt;()
+);</code></pre>
+          <p style="margin-top: 14px;">This is not the end of the story, but it is a good first step for lesson 1. Later lessons will introduce concurrent collections and blocking queues.</p>
+        </div>
+      </div>
+
+      <table style="margin-top: 18px;">
+        <thead>
+          <tr>
+            <th>Need</th>
+            <th>Structure</th>
+            <th>Concurrency note</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Look up tasks by id</td>
+            <td><code>Map</code></td>
+            <td>Later: <code>ConcurrentHashMap</code></td>
+          </tr>
+          <tr>
+            <td>Process highest priority first</td>
+            <td><code>PriorityQueue</code></td>
+            <td>Not thread-safe; later: <code>PriorityBlockingQueue</code></td>
+          </tr>
+          <tr>
+            <td>Pass work in first-in, first-out order</td>
+            <td><code>Queue</code></td>
+            <td>Later: <code>BlockingQueue</code></td>
+          </tr>
+          <tr>
+            <td>Simple sequential list</td>
+            <td><code>ArrayList</code></td>
+            <td>Fine for one thread, risky for shared mutation</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Let's talk</h2>
+        </div>
+      </div>
+
+      <details>
+        <summary>Common misconception: “But Java is fast, so it should handle this.”</summary>
+        <div style="padding-top: 12px; color: var(--muted);">Speed is not the issue. The issue is interleaving. The CPU may switch between threads in many possible orders, and some orders break correctness.</div>
+      </details>
+
+      <details>
+        <summary>Why this matters for data structures, not just counters</summary>
+        <div style="padding-top: 12px; color: var(--muted);">A counter is the simplest example of a shared mutable value. Collections are just larger, richer shared mutable structures. If you understand the counter, you can extend the idea to lists, maps, and queues.</div>
+      </details>
+
+      <details>
+        <summary>What will we look at in the next lesson</summary>
+        <div style="padding-top: 12px; color: var(--muted);">Next we stop manually creating raw threads for everything. We move to <code>ExecutorService</code>, thread pools, and concurrent collections like <code>ConcurrentHashMap</code>.</div>
+      </details>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Quick knowledge check</h2>
+          <p>Let's see if you can identify the core issue below.</p>
+        </div>
+      </div>
+
+      <div class="quiz-card">
+        <div class="icon">❓</div>
+        <h3>What is the main reason <code>counter++</code> is unsafe when multiple threads share the same object?</h3>
+        <div class="mcq">
+          <label><input type="radio" name="q1" value="a"> Because integers are immutable in Java.</label>
+          <label><input type="radio" name="q1" value="b"> Because incrementing may internally involve multiple steps that can interleave.</label>
+          <label><input type="radio" name="q1" value="c"> Because all threads always run in the exact same order.</label>
+          <label><input type="radio" name="q1" value="d"> Because ArrayList is not thread-safe.</label>
+        </div>
+        <div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="inline-btn pill-btn" id="checkQuizBtn">Check answer</button>
+          <button class="inline-btn pill-btn secondary" id="resetQuizBtn">Reset</button>
+        </div>
+        <div class="mcq-result" id="quizResult"></div>
+      </div>
+    </section>
+
+    <section id="exercises">
+      <div class="section-head">
+        <div>
+          <h2>In-class exercises and homework</h2>
+        </div>
+      </div>
+
+      <div class="lesson-end-grid">
+        <div class="info-card">
+          <div class="icon">🧪</div>
+          <h3>In-class exercises</h3>
+          <ol>
+            <li>Complete <code>ThreadSafeTaskCounter</code> so the final count is correct under concurrency.</li>
+            <li>Run the unsafe and safe demos and compare output several times.</li>
+            <li>Mark the exact critical section in the broken code.</li>
+            <li>Explain why a shared <code>ArrayList</code> is risky when many threads mutate it.</li>
+          </ol>
+        </div>
+
+        <div class="info-card">
+          <div class="icon">🏠</div>
+          <h3>Homework</h3>
+          <ul class="checklist">
+            <li>Complete the <code>TaskRegistry</code> class.</li>
+            <li>Support safe add, remove, lookup, and snapshot operations.</li>
+            <li>Document thread-safety choices in JavaDoc.</li>
+            <li>Prepare for lesson 2 by identifying where a <code>Map</code> will matter.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer-note">Next lesson: <strong>ExecutorService</strong>, concurrent collections, and why thread pools are better than manually spawning threads for every job.</p>
+  </main>
+
+  <script>
+    const codeTabs = document.querySelectorAll('.code-tab');
+    const codePanels = document.querySelectorAll('.code-panel');
+
+    codeTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        codeTabs.forEach(t => t.classList.remove('active'));
+        codePanels.forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    const simLog = document.getElementById('simLog');
+    const actualVal = document.getElementById('actualVal');
+    const stateVal = document.getElementById('stateVal');
+    const expectedVal = document.getElementById('expectedVal');
+    const unsafeBtn = document.getElementById('unsafeRunBtn');
+    const safeBtn = document.getElementById('safeRunBtn');
+    const resetBtn = document.getElementById('resetRunBtn');
+
+    function resetSimulation() {
+      expectedVal.textContent = '9';
+      actualVal.textContent = '7';
+      stateVal.textContent = 'Ready';
+      simLog.textContent = 'Counter starts at 7.\nClick “Run unsafe” or “Run safe”.';
+    }
+
+    function runUnsafe() {
+      expectedVal.textContent = '9';
+      actualVal.textContent = '8';
+      stateVal.textContent = 'Race detected';
+      simLog.textContent = [
+        'Unsafe run started...',
+        'Thread A reads count = 7',
+        'Thread B reads count = 7',
+        'Thread A computes 8',
+        'Thread B computes 8',
+        'Thread A writes 8',
+        'Thread B writes 8',
+        'Final count = 8',
+        'One increment was lost because both threads used the same old value.'
+      ].join('\n');
+    }
+
+    function runSafe() {
+      expectedVal.textContent = '9';
+      actualVal.textContent = '9';
+      stateVal.textContent = 'Protected';
+      simLog.textContent = [
+        'Safe run started...',
+        'Thread A enters synchronized section',
+        'Thread A reads count = 7',
+        'Thread A computes 8',
+        'Thread A writes 8',
+        'Thread A exits synchronized section',
+        'Thread B enters synchronized section',
+        'Thread B reads count = 8',
+        'Thread B computes 9',
+        'Thread B writes 9',
+        'Final count = 9',
+        'The critical section forced correct ordering.'
+      ].join('\n');
+    }
+
+    unsafeBtn.addEventListener('click', runUnsafe);
+    safeBtn.addEventListener('click', runSafe);
+    resetBtn.addEventListener('click', resetSimulation);
+
+    const checkQuizBtn = document.getElementById('checkQuizBtn');
+    const resetQuizBtn = document.getElementById('resetQuizBtn');
+    const quizResult = document.getElementById('quizResult');
+
+    checkQuizBtn.addEventListener('click', () => {
+      const selected = document.querySelector('input[name="q1"]:checked');
+      if (!selected) {
+        quizResult.className = 'mcq-result show nope';
+        quizResult.textContent = 'Choose an answer first.';
+        return;
+      }
+      if (selected.value === 'b') {
+        quizResult.className = 'mcq-result show ok';
+        quizResult.textContent = 'Correct. The read-modify-write sequence can interleave, so plain increment is not atomic.';
+      } else {
+        quizResult.className = 'mcq-result show nope';
+        quizResult.textContent = 'Not quite. The key issue is that incrementing is really multiple steps that can interleave across threads.';
+      }
+    });
+
+    resetQuizBtn.addEventListener('click', () => {
+      const selected = document.querySelector('input[name="q1"]:checked');
+      if (selected) selected.checked = false;
+      quizResult.className = 'mcq-result';
+      quizResult.textContent = '';
+    });
+  </script>
+</body>
+</html>
