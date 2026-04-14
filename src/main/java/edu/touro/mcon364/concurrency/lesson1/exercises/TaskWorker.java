@@ -41,6 +41,22 @@ public class TaskWorker {
         // TODO: create a thread with the given name that processes every task
         //       in the list (increment processedCount for each one),
         //       then start it and join it.
+
+        Thread t = new Thread(() -> { // first we create the thread
+            // get the name actually assigned to the thread
+            // The getName() method is a built-in method of the java.lang.Thread class.
+            // Thread.currentThread(): This static method returns the Thread object that is currently running that specific line of code.
+            //.getName(): This instance method returns the String name assigned to that thread.
+            this.workerName = Thread.currentThread().getName();
+
+            for (Task task : this.tasks) {
+                processedCount++;
+            }
+        }, threadName); // we use the string from the constructor
+
+        t.start();
+        t.join();
+
     }
 
     /** Returns the number of tasks processed by the worker thread. */
