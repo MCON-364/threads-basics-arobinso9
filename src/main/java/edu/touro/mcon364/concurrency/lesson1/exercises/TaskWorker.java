@@ -49,9 +49,16 @@ public class TaskWorker {
             //.getName(): This instance method returns the String name assigned to that thread.
             this.workerName = Thread.currentThread().getName();
 
+            // count() returns a long, so we cast to int
+            this.processedCount = (int) tasks.stream().count();
+
+            /* with loop:
             for (Task task : this.tasks) {
-                processedCount++;
+            processedCount++;
             }
+             */
+
+
         }, threadName); // we use the string from the constructor
 
         t.start();
