@@ -37,25 +37,59 @@ public class ParallelSumCalculator {
      * @param workers number of pool threads / partitions
      * @return the total sum
      */
+    // Callable<Long> is ike Runnable, but it has a return statement.
+    // Future<Long> is a receipt for a result that hasn't been finished yet.
+
     public long parallelSum(List<Integer> numbers, int workers)
             throws InterruptedException, ExecutionException {
 
         // TODO: create a thread pool with the right number of workers
+        // First we create the pool- and initilaize it to have "workers" amt of threads
+        ExecutorService executor = Executors.newFixedThreadPool(workers);
+        List<Future<Long>> futures = new ArrayList<>();
 
         // TODO: divide numbers into roughly equal slices — one slice per worker
         //       Think: how do you calculate the slice size without losing
         //       the last few elements when the list doesn't divide evenly?
 
+        int size = numbers.size();
+        int chunkSize = (int) Math.ceil((double) size / workers);
+
         // TODO: submit each slice as a task that returns its partial sum.
         //       Collect the handles to the results — but do NOT ask for the
         //       answers yet, so that all slices run at the same time.
-        List<Future<Long>> futures = new ArrayList<>();
+        for (int i = 0; i < workers; i++) {
+            // start tells the worker where to begin in the list, and end tells them where to stop
+            int start = i * chunkSize;
+            // we need to make sure the last slice doesn't go out of bounds
+            int end = Math.min(start + chunkSize, size);
+
+            if (start < end) {
+                List<Integer> slice = numbers.subList(start, end);
+
+                Future<Long> future = executor.submit(() -> {
+                    long sum = 0;
+                    for (int num : slice) {
+                        sum += num;
+                    }
+                    return sum; // This value is wrapped in the Future
+                });
+
+                futures.add(future);
+            }
+        }
 
         // TODO: now that all slices are running, collect each partial sum
         //       and add it to the total
         long total = 0;
+        for (Future<Long> f : futures) {
+            // .get() pauses until that specific worker is done
+            total += f.get();
+        }
 
         // TODO: release pool resources before returning
+        executor.shutdown();
+
         return total;
     }
 }

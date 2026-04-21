@@ -57,6 +57,8 @@ java -cp target/classes edu.touro.mcon364.concurrency.lesson1.demo.SafeTaskListD
 
 ## Lesson 2 contents in this starter repo
 
+Imagine 100 threads trying to increment at once. With synchronized, only one thread can even enter the method at a time; the other 99 are blocked. With AtomicInteger, threads don't "block." They try to update the value; if another thread beats them to it, they simply retry the operation immediately. It's much faster for simple counters.
+
 ### Demos
 - `AtomicCounterDemo` — `AtomicInteger` vs plain `int`; `compareAndSet`
 - `ReentrantLockDemo` — `lock/finally/unlock`; `tryLock()`; reentrant acquisition

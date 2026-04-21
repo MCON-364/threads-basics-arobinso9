@@ -29,7 +29,9 @@ public class PrinterRoom {
     private final Semaphore semaphore;
 
     // counters visible to tests
+    // active count is the real - time counter. It goes up by 1 right when someone starts printing, and goes down by 1 when they complete.
     private final AtomicInteger activeCount   = new AtomicInteger(0);
+    // maxObserved is the high Score or the peak of the room's occupancy. - we used it here to prove the sempahore is working bc if we only hv 3 printers- max should never be 4...
     private final AtomicInteger maxObserved   = new AtomicInteger(0);
     private final AtomicInteger completedJobs = new AtomicInteger(0);
 
@@ -37,7 +39,8 @@ public class PrinterRoom {
         this.printerCount = printerCount;
         // TODO: initialise the semaphore so that exactly printerCount threads
         //       may be inside print() at the same time
-        this.semaphore = null;
+        // we initialize the semaphore with the number of available printers
+        this.semaphore = new Semaphore(printerCount);
     }
 
     /**
@@ -48,18 +51,33 @@ public class PrinterRoom {
      */
     public void print(String document) throws InterruptedException {
         // TODO: block here until a printer permit is available
-
+        semaphore.acquire();
         try {
             // TODO: record that one more job is now active, then update the
             //       high-water mark if the new active count is a new maximum
 
+            // we first increment activeCount
+            int current = activeCount.incrementAndGet();
+
+            // then we and update the maxObserved high-water mark if the new active count is a new maximum
+            // updateAndGet is a Safe Update Loop. It takes the current value, runs the custom logic on it,
+            // and then tries to save the new result—all while making sure no other thread changed the value behind its back
+            maxObserved.updateAndGet(prev-> Math.max(prev, current));
+
             // Simulate printing time
             Thread.sleep(50);
 
+            // record that this job has finished
+            completedJobs.incrementAndGet();
+
             // TODO: record that this job has finished
-        } finally {
+        } finally { // finally --> no matter what- even if theres a crash- we still release the "token" so no one is blocked out forever
             // TODO: signal that one more printer is free again — do this even
             //       if an exception was thrown, and update the active count
+            // we signal that a printer is free again by updating the active count :)
+            // We do this in the finally block to ensure the permit is released even if an error occurs
+            activeCount.decrementAndGet();
+            semaphore.release();
         }
     }
 
