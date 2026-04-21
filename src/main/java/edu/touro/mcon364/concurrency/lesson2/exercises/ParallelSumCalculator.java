@@ -46,6 +46,8 @@ public class ParallelSumCalculator {
         // TODO: create a thread pool with the right number of workers
         // First we create the pool- and initilaize it to have "workers" amt of threads
         ExecutorService executor = Executors.newFixedThreadPool(workers);
+        // Every time you give a worker a task, they give you a Future (a ticket) that says:
+        // I don't have the answer yet, but check this ticket later and I'll have it for you.
         List<Future<Long>> futures = new ArrayList<>();
 
         // TODO: divide numbers into roughly equal slices — one slice per worker
@@ -58,20 +60,24 @@ public class ParallelSumCalculator {
         // TODO: submit each slice as a task that returns its partial sum.
         //       Collect the handles to the results — but do NOT ask for the
         //       answers yet, so that all slices run at the same time.
+
         for (int i = 0; i < workers; i++) {
             // start tells the worker where to begin in the list, and end tells them where to stop
             int start = i * chunkSize;
-            // we need to make sure the last slice doesn't go out of bounds
+            // Math.min(..., size) makes sure the last slice doesn't go out of bounds- bc we did ceiling.
+            // if the list ends at index 100, but the math accidentally tries to ask for index 105, the program crashes. This line forces the end to be the actual end of the list.
             int end = Math.min(start + chunkSize, size);
 
             if (start < end) {
+                // we create a subList which is a view that we hand to each worker.
+                // the sublist only shows each thead their specific section of the big list.
                 List<Integer> slice = numbers.subList(start, end);
 
+                // the lambda is a Callable and returns a value (sum). Unlike runnable which only does work.
                 Future<Long> future = executor.submit(() -> {
                     long sum = 0;
-                    for (int num : slice) {
+                    for (int num : slice)
                         sum += num;
-                    }
                     return sum; // This value is wrapped in the Future
                 });
 
