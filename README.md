@@ -54,3 +54,38 @@ java -cp target/classes edu.touro.mcon364.concurrency.lesson1.demo.SafeTaskListD
 
 - The “unsafe” demos are intentionally broken or fragile so you can observe concurrency bugs.
 - The exercise/homework classes contain TODOs for students.
+
+## Lesson 2 contents in this starter repo
+
+### Demos
+- `AtomicCounterDemo` — `AtomicInteger` vs plain `int`; `compareAndSet`
+- `ReentrantLockDemo` — `lock/finally/unlock`; `tryLock()`; reentrant acquisition
+- `SynchronizersDemo` — `CountDownLatch`, `Semaphore`, `CyclicBarrier`, `Phaser` side-by-side
+- `ExecutorServiceDemo` — raw-thread style vs fixed thread pool; `shutdown`/`awaitTermination`
+- `CallableFutureDemo` — `Callable<T>`, `Future<T>`, `get()`, `isDone()`, submit-all-then-get pattern
+
+### Exercises
+- `AtomicTaskCounter` (exercise) — refactor `synchronized` counter to `AtomicInteger`
+- `WorkerStartupLatch` (exercise) — startup coordination with `CountDownLatch`
+- `PrinterRoom` (exercise) — limit concurrent access with `Semaphore`
+- `BatchTaskExecutor` (exercise) — submit tasks to a fixed `ExecutorService` thread pool
+- `ParallelSumCalculator` (exercise) — parallel split-sum using `Callable` and `Future`
+- `IndependentCounters` (exercise) — fine-grained `ReentrantLock` per counter
+- `ExecutorTaskManager` (homework) — atomic IDs, `Callable`/`Future` submission, `ReentrantLock`-protected results list, `awaitAll`, clean `shutdown`
+
+## Running demos
+
+```bash
+mvn -q -DskipTests compile
+java -cp target/classes edu.touro.mcon364.concurrency.lesson2.demo.AtomicCounterDemo
+java -cp target/classes edu.touro.mcon364.concurrency.lesson2.demo.ReentrantLockDemo
+java -cp target/classes edu.touro.mcon364.concurrency.lesson2.demo.SynchronizersDemo
+java -cp target/classes edu.touro.mcon364.concurrency.lesson2.demo.ExecutorServiceDemo
+java -cp target/classes edu.touro.mcon364.concurrency.lesson2.demo.CallableFutureDemo
+```
+
+## Notes
+
+- The demos illustrate key concepts of multithreading and concurrency control in Java.
+- Exercises are designed to reinforce the concepts learned in the demos and lessons.
+
