@@ -42,6 +42,7 @@ public class ParallelSumCalculator {
 
     public long parallelSum(List<Integer> numbers, int workers)
             throws InterruptedException, ExecutionException {
+        // we need this throws here bc othersie the f.get() below will throw an error bc nothing wld be handling the possible errors
 
         // TODO: create a thread pool with the right number of workers
         // First we create the pool- and initilaize it to have "workers" amt of threads
@@ -76,24 +77,31 @@ public class ParallelSumCalculator {
                 // the lambda is a Callable and returns a value (sum). Unlike runnable which only does work.
                 Future<Long> future = executor.submit(() -> {
                     long sum = 0;
+                    // for each number in the slice, we add to the sum. so sum= sum of all numbers in the slice
                     for (int num : slice)
                         sum += num;
                     return sum; // This value is wrapped in the Future
                 });
 
+                // we take the threads future ticket and add it to a big list of all the futures
                 futures.add(future);
             }
         }
 
         // TODO: now that all slices are running, collect each partial sum
         //       and add it to the total
+
         long total = 0;
         for (Future<Long> f : futures) {
             // .get() pauses until that specific worker is done
+            // we loop thru all the futures- if the worker/thread for that future is done,
+            // we take their sum. If they are still working, we sit here and wait until they finish
+            // since we called submit on all workers first, they are all working at the same time while the main thread waits here.- by f.get()
             total += f.get();
         }
 
         // TODO: release pool resources before returning
+        // we close the program- so the threads don't stay alive forever
         executor.shutdown();
 
         return total;

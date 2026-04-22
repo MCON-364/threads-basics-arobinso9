@@ -46,8 +46,7 @@ public class AtomicTaskCounter {
     /** Returns the current counter value. */
     public int getCount() {
         // TODO: implement
-        count.get();
-        return 0;
+        return count.get();
     }
 
     /** Resets the counter to zero. */
