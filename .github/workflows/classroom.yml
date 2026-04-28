@@ -1,8 +1,4 @@
-name: GitHub Classroom Workflow
-
-on:
-  push:
-    branches: [ main, develop ]name: Autograding Tests
+name: Autograding Tests
 
 on:
   push:
@@ -184,32 +180,3 @@ jobs:
           EXECUTOR-TASK-MANAGER_RESULTS: "${{ steps.executor-task-manager.outputs.result }}"
         with:
           runners: thread-safe-task-counter,task-worker,shared-task-list,periodic-logger,lambda-runnable-exercise,task-registry,atomic-task-counter,worker-startup-latch,printer-room,batch-task-executor,parallel-sum-calculator,independent-counters,executor-task-manager
-  pull_request:
-    branches: [ main, develop ]
-  workflow_dispatch:
-
-jobs:
-  autograding:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-
-      - name: Run Autograder
-        id: run-tests
-        uses: education/autograding@v1
-
-      - name: Autograding Reporter
-        uses: education/autograding-grading-reporter@v1
-        if: always()
-        env:
-          RUN-TESTS_RESULTS: "${{steps.run-tests.outcome}}"
-        with:
-          runners: run-tests
