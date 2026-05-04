@@ -31,6 +31,13 @@ public class CallableFutureDemo {
             return 21 + 21;
         };
 
+       // When we submit() a Callable to an ExecutorService, the thread pool says:
+        // "I’ll get to this when I can. In the meantime, here is a Future object so you can check back later"
+        // A Future allows you to interact with the background task in three main ways:
+        // get()- "Give me the result." -If the task isn't done, your code stops (blocks) and waits there until it is
+        // isDone()- "Are we there yet?" - Returns true or false immediately without making you wait.
+        // cancel()- "Never mind." - Attempts to stop the task if it hasn't finished or started yet.
+
         Future<Integer> future = pool.submit(sumTask);
 
         System.out.println("[main] task submitted — doing other work while it runs…");
@@ -69,6 +76,16 @@ public class CallableFutureDemo {
         for (Future<String> f : futures) {
             System.out.println("  got: " + f.get());
         }
+        /*
+        with streams:
+        futures.stream().forEach(f -> {
+            try {
+                System.out.println("  got: " + f.get());
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+    }
+});
+         */
 
         pool.shutdown();
     }
@@ -76,6 +93,7 @@ public class CallableFutureDemo {
     // ── 3. isDone / cancel ────────────────────────────────────────────────────
 
     public static void futurePollDemo() throws InterruptedException, ExecutionException {
+        // newSingleThreadExecutor(): This tells Java: I only want one single thread to exist for this service.
         ExecutorService pool = Executors.newSingleThreadExecutor();
 
         Future<String> slow = pool.submit(() -> {
