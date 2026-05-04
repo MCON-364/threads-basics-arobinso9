@@ -46,6 +46,26 @@ public class PeriodicLogger {
         // TODO: create a daemon thread named "periodic-logger" that
         //       sleeps for intervalMs then appends "tick N" (1-based) to log,
         //       repeating 'ticks' times total, then starts it.
+
+        worker = new Thread(() -> { // we instantiate the worker thread first
+            try {
+                for (int i = 1; i <= ticks; i++) {
+                    // we call sleep on the Thread keyword bc Sleep is a static method. Its stelling the CPU its gng to sleep
+                    // the difference is btwn putting urself to sleep and one thread putting another thread to sleep
+                    // t.sleep(1000) --> telling Thread T, go to sleep for 1 second.
+                    // Thread.sleep(1000) --> I (the current thread) am going to sleep.
+                    Thread.sleep(intervalMs); // pause for the interval.
+                    log.add("tick " + i);     // 1-based log entry
+                }
+            } catch (InterruptedException e) {
+                // if the thread is interrupted while sleeping, we stop
+                Thread.currentThread().interrupt();
+            }
+        }, "periodic-logger");
+
+
+        worker.setDaemon(true); // must be set BEFORE start() - we need to say what ttpe of thread it ia
+        worker.start();
     }
 
     /**
@@ -53,6 +73,8 @@ public class PeriodicLogger {
      */
     public boolean isRunning() {
         // TODO: return whether the worker thread is alive
+        if(worker.isAlive())
+            return true;
         return false;
     }
 
@@ -61,6 +83,7 @@ public class PeriodicLogger {
      */
     public void awaitCompletion() throws InterruptedException {
         // TODO: join the worker thread
+        worker.join();
     }
 
     /** Returns the log messages collected so far. */

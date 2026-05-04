@@ -1,0 +1,1832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lesson 2 - java.util.concurrent, Atomics, Locks, Synchronizers, and Executors</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --ink: #18212f;
+      --muted: #5b677a;
+      --brand: #7a0019;
+      --brand-2: #9f1239;
+      --blue: #2563eb;
+      --green: #15803d;
+      --amber: #b45309;
+      --purple: #7c3aed;
+      --line: #dbe3ee;
+      --soft: #eef4ff;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(37,99,235,0.08), transparent 26%),
+        radial-gradient(circle at top left, rgba(124,58,237,0.08), transparent 22%),
+        linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%);
+      line-height: 1.65;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(10px);
+      background: rgba(255,255,255,0.86);
+      border-bottom: 1px solid rgba(219,227,238,0.8);
+    }
+
+    .topbar-inner,
+    .container {
+      width: min(1160px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 0;
+    }
+
+    .brandmark {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      color: var(--brand);
+    }
+
+    .brandmark svg {
+      width: 36px;
+      height: 36px;
+      flex: 0 0 auto;
+    }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      padding: 7px 10px;
+      border-radius: 999px;
+      transition: 0.2s ease;
+    }
+
+    nav a:hover {
+      background: #f2f6fc;
+      color: var(--brand);
+    }
+
+    .hero {
+      padding: 34px 0 24px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.9fr;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .hero-card,
+    .panel,
+    .info-card,
+    .timeline-card,
+    .quiz-card,
+    .demo-card,
+    details {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card { padding: 28px; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--brand-2);
+      background: #fff1f5;
+      border: 1px solid #ffd4df;
+      padding: 7px 12px;
+      border-radius: 999px;
+    }
+
+    h1, h2, h3 { line-height: 1.18; }
+    h1 {
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      margin: 14px 0 14px;
+      color: var(--brand);
+    }
+
+    h2 {
+      font-size: clamp(1.5rem, 2.4vw, 2rem);
+      margin: 0 0 16px;
+      color: var(--brand);
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      margin: 0 0 8px;
+      color: #11213d;
+    }
+
+    p { margin: 0 0 14px; }
+    .lead {
+      font-size: 1.08rem;
+      color: #334155;
+      max-width: 62ch;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .pill-btn,
+    button.inline-btn {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      border-radius: 999px;
+      font-weight: 700;
+      padding: 11px 16px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+    }
+
+    .pill-btn {
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: #fff;
+      text-decoration: none;
+      box-shadow: 0 8px 20px rgba(159, 18, 57, 0.22);
+    }
+
+    .pill-btn.secondary {
+      background: #eff6ff;
+      color: var(--blue);
+      box-shadow: none;
+      border: 1px solid #cfe0ff;
+    }
+
+    .pill-btn:hover,
+    button.inline-btn:hover { transform: translateY(-1px); }
+
+    .hero-visual { padding: 22px; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .metric {
+      background: #f8fbff;
+      border: 1px solid #d9e8ff;
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 1.45rem;
+      color: var(--blue);
+    }
+
+    .metric span {
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    section { margin: 22px 0 28px; }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .section-head p {
+      color: var(--muted);
+      max-width: 60ch;
+    }
+
+    .grid-2,
+    .grid-3,
+    .comparison-grid,
+    .lesson-end-grid,
+    .mini-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .comparison-grid { grid-template-columns: 1fr 1fr; }
+    .lesson-end-grid { grid-template-columns: 1.1fr 0.9fr; }
+    .mini-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .info-card,
+    .timeline-card,
+    .quiz-card,
+    .demo-card,
+    .panel { padding: 22px; }
+
+    .info-card .icon,
+    .timeline-card .icon,
+    .quiz-card .icon,
+    .demo-card .icon,
+    .panel .icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: inline-grid;
+      place-items: center;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #eff6ff, #f5f3ff);
+      border: 1px solid #dae6ff;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .tag {
+      font-size: 0.85rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      color: var(--muted);
+    }
+
+    .story-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .story-box {
+      padding: 16px;
+      border-radius: 16px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      min-height: 150px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .story-box::after {
+      content: "";
+      position: absolute;
+      inset: auto -12px -12px auto;
+      width: 84px;
+      height: 84px;
+      opacity: 0.14;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--blue), transparent 52%);
+    }
+
+    .story-box strong {
+      display: block;
+      color: var(--brand);
+      margin-bottom: 8px;
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 28px;
+      margin: 0;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 10px;
+      top: 4px;
+      bottom: 4px;
+      width: 2px;
+      background: linear-gradient(180deg, #bfdbfe, #c4b5fd);
+    }
+
+    .timeline li {
+      list-style: none;
+      position: relative;
+      margin: 0 0 18px;
+      padding-left: 12px;
+    }
+
+    .timeline li::before {
+      content: "";
+      position: absolute;
+      left: -22px;
+      top: 7px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid var(--blue);
+      box-shadow: 0 0 0 4px #eff6ff;
+    }
+
+    .callout {
+      border-radius: 18px;
+      padding: 18px 20px;
+      border: 1px solid;
+      margin: 14px 0 0;
+    }
+
+    .callout.note { background: #f0f7ff; border-color: #cfe0ff; }
+    .callout.warn { background: #fff7ed; border-color: #fed7aa; }
+    .callout.good { background: #f0fdf4; border-color: #bbf7d0; }
+
+    pre {
+      margin: 0;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 18px;
+      border-radius: 16px;
+      overflow-x: auto;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+      font-size: 0.95rem;
+    }
+
+    code { font-family: "SFMono-Regular", Consolas, Monaco, monospace; }
+
+    .code-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .code-tab {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      padding: 8px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .code-tab.active {
+      background: #eef4ff;
+      color: var(--blue);
+      border-color: #bfdbfe;
+    }
+
+    .code-panel { display: none; }
+    .code-panel.active { display: block; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+    }
+
+    th, td {
+      text-align: left;
+      padding: 14px;
+      border-bottom: 1px solid #e9eef5;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #243247;
+      font-size: 0.95rem;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    details {
+      padding: 16px 18px;
+      margin-bottom: 12px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 800;
+      color: #11213d;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: "+";
+      font-size: 1.4rem;
+      color: var(--blue);
+    }
+
+    details[open] summary::after { content: "–"; }
+
+    .sim-shell {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+      background: linear-gradient(180deg, #fbfdff, #f7fbff);
+    }
+
+    .sim-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .sim-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .counter-box {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 12px 0 14px;
+    }
+
+    .counter-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .counter-card strong {
+      display: block;
+      font-size: 1.4rem;
+      color: var(--brand);
+    }
+
+    .log {
+      background: #0f172a;
+      color: #dbeafe;
+      border-radius: 16px;
+      padding: 16px;
+      min-height: 180px;
+      max-height: 260px;
+      overflow: auto;
+      font-family: "SFMono-Regular", Consolas, Monaco, monospace;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+    }
+
+    .flow-graphic {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+      background: linear-gradient(180deg, #fff, #f8fbff);
+    }
+
+    .flow-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      align-items: center;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .flow-node {
+      padding: 14px 10px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: #fff;
+      min-height: 88px;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+    }
+
+    .flow-arrow {
+      font-size: 1.5rem;
+      color: var(--blue);
+      font-weight: 900;
+    }
+
+    .stack-steps {
+      display: grid;
+      gap: 12px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: #fbfdff;
+    }
+
+    .step strong {
+      color: var(--brand);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .mcq {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .mcq label {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .mcq-result {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 14px;
+      display: none;
+      font-weight: 700;
+    }
+
+    .mcq-result.show { display: block; }
+    .mcq-result.ok { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .mcq-result.nope { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+
+    .checklist { margin: 0; padding-left: 20px; }
+    .checklist li { margin-bottom: 8px; }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.95rem;
+      text-align: center;
+      margin: 34px 0 28px;
+    }
+
+    @media (max-width: 960px) {
+      .hero-grid,
+      .grid-2,
+      .grid-3,
+      .comparison-grid,
+      .lesson-end-grid,
+      .story-strip,
+      .counter-box,
+      .flow-row,
+      .mini-grid,
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar-inner {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brandmark">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#7a0019"/>
+              <stop offset="100%" stop-color="#2563eb"/>
+            </linearGradient>
+          </defs>
+          <rect x="6" y="6" width="52" height="52" rx="16" fill="url(#g1)"/>
+          <path d="M18 20h28v6H18zm0 10h28v6H18zm0 10h18v6H18z" fill="#fff" opacity="0.96"/>
+          <circle cx="46" cy="43" r="6" fill="#fff" opacity="0.95"/>
+        </svg>
+        <div>
+          <div>Lesson 2</div>
+          <small style="color: var(--muted); font-weight: 600;">java.util.concurrent • atomics • locks • executors</small>
+        </div>
+      </div>
+      <nav>
+        <a href="#agenda">Agenda</a>
+        <a href="#recap">Recap</a>
+        <a href="#why-concurrent">Why concurrent?</a>
+        <a href="#atomic">Atomics</a>
+        <a href="#locks">Locks</a>
+        <a href="#readwritelock">ReadWriteLock</a>
+        <a href="#synchronizers">Synchronizers</a>
+        <a href="#executors">Executors</a>
+        <a href="#callable">Callable/Future</a>
+        <a href="#exercises">Exercises</a>
+      </nav>
+    </div>
+  </div>
+
+  <main class="container">
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="hero-card">
+          <div class="eyebrow">From raw threads to modern concurrency tools</div>
+          <h1>java.util.concurrent: finer tools for real multithreaded programs</h1>
+          <p class="lead">In Lesson 1, we manually created threads, saw why shared mutable state is dangerous, and used <code>synchronized</code> plus concurrent collections as first-line protection. In Lesson 2, we move to the richer toolbox in Java’s concurrency packages: atomic variables, explicit locks, synchronizers, thread pools, <code>Callable</code>, and <code>Future</code>.</p>
+          <div class="hero-actions">
+            <a class="pill-btn" href="#agenda">Start the lesson</a>
+            <a class="pill-btn secondary" href="#executors">Jump to executors</a>
+          </div>
+        </div>
+
+        <div class="hero-visual hero-card">
+          <svg viewBox="0 0 560 360" width="100%" role="img" aria-label="Illustration showing many tasks being managed by a thread pool and concurrency tools">
+            <defs>
+              <linearGradient id="poolBg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#eff6ff"/>
+                <stop offset="100%" stop-color="#fdf2f8"/>
+              </linearGradient>
+              <linearGradient id="taskFlow" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#2563eb"/>
+                <stop offset="100%" stop-color="#7c3aed"/>
+              </linearGradient>
+            </defs>
+            <rect x="8" y="8" width="544" height="344" rx="28" fill="url(#poolBg)" stroke="#dbe3ee"/>
+
+            <rect x="36" y="70" width="120" height="200" rx="20" fill="#fff" stroke="#cfe0ff"/>
+            <text x="96" y="102" text-anchor="middle" font-size="22" font-weight="800" fill="#2563eb">Task Queue</text>
+            <rect x="58" y="122" width="76" height="28" rx="10" fill="#dbeafe"/>
+            <rect x="58" y="160" width="76" height="28" rx="10" fill="#ddd6fe"/>
+            <rect x="58" y="198" width="76" height="28" rx="10" fill="#dcfce7"/>
+            <text x="96" y="141" text-anchor="middle" font-size="14" font-weight="700" fill="#1d4ed8">Task A</text>
+            <text x="96" y="179" text-anchor="middle" font-size="14" font-weight="700" fill="#6d28d9">Task B</text>
+            <text x="96" y="217" text-anchor="middle" font-size="14" font-weight="700" fill="#15803d">Task C</text>
+
+            <rect x="206" y="48" width="310" height="240" rx="24" fill="#fff" stroke="#fbcfe8"/>
+            <text x="361" y="82" text-anchor="middle" font-size="24" font-weight="800" fill="#7a0019">Thread Pool</text>
+
+            <rect x="234" y="112" width="110" height="56" rx="18" fill="#eff6ff" stroke="#bfdbfe"/>
+            <rect x="378" y="112" width="110" height="56" rx="18" fill="#f5f3ff" stroke="#ddd6fe"/>
+            <rect x="234" y="190" width="110" height="56" rx="18" fill="#f0fdf4" stroke="#bbf7d0"/>
+            <rect x="378" y="190" width="110" height="56" rx="18" fill="#fff7ed" stroke="#fed7aa"/>
+
+            <text x="289" y="145" text-anchor="middle" font-size="18" font-weight="700" fill="#2563eb">worker-1</text>
+            <text x="433" y="145" text-anchor="middle" font-size="18" font-weight="700" fill="#7c3aed">worker-2</text>
+            <text x="289" y="223" text-anchor="middle" font-size="18" font-weight="700" fill="#15803d">worker-3</text>
+            <text x="433" y="223" text-anchor="middle" font-size="18" font-weight="700" fill="#b45309">worker-4</text>
+
+            <path d="M156 170 C190 170, 190 170, 206 170" fill="none" stroke="url(#taskFlow)" stroke-width="12" stroke-linecap="round"/>
+            <text x="280" y="317" text-anchor="middle" font-size="18" font-weight="700" fill="#475569">Atomics • Locks • Barriers • Futures</text>
+          </svg>
+
+          <div class="metrics">
+            <div class="metric">
+              <strong>1 blunt tool</strong>
+              <span><code>synchronized</code> on the whole instance is simple, but coarse.</span>
+            </div>
+            <div class="metric">
+              <strong>Many precise tools</strong>
+              <span>Atomics, locks, synchronizers, pools, and futures match different problems.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="info-card">
+        <div class="icon">🎯</div>
+        <h3>Lesson objectives</h3>
+        <ul class="checklist">
+          <li>Review thread creation and the basic shared-state protections from Lesson 1.</li>
+          <li>Explain why <code>synchronized</code> is sometimes too coarse.</li>
+          <li>Use classes from <code>java.util.concurrent.atomic</code> for lock-free state updates.</li>
+          <li>Compare <code>Lock</code> / <code>ReentrantLock</code> with <code>synchronized</code>.</li>
+          <li>Recognize when to use <code>CountDownLatch</code>, <code>Semaphore</code>, <code>CyclicBarrier</code>, and <code>Phaser</code>.</li>
+          <li>Explain thread pools, executors, <code>Callable</code>, and <code>Future</code>.</li>
+        </ul>
+        <div class="tag-row">
+          <span class="tag">java.util.concurrent</span>
+          <span class="tag">Atomics</span>
+          <span class="tag">Locks</span>
+          <span class="tag">Synchronizers</span>
+          <span class="tag">Executors</span>
+          <span class="tag">Futures</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="agenda">
+      <div class="section-head">
+        <div>
+          <h2>Agenda</h2>
+          <p>We begin with a short recap, then move from coarse-grained locking to more specialized concurrency tools that let us express intent much more clearly.</p>
+        </div>
+      </div>
+      <div class="story-strip">
+        <div class="story-box">
+          <strong>1. Recap</strong>
+          How we created threads and what went wrong with shared mutable state.
+        </div>
+        <div class="story-box">
+          <strong>2. Better control</strong>
+          Atomics and locks for more precise coordination than one big object lock.
+        </div>
+        <div class="story-box">
+          <strong>3. Team coordination</strong>
+          Latches, semaphores, barriers, and phasers for many-thread workflows.
+        </div>
+        <div class="story-box">
+          <strong>4. Modern task execution</strong>
+          Executors, thread pools, <code>Callable</code>, and <code>Future</code> for real applications.
+        </div>
+      </div>
+    </section>
+
+    <section id="recap">
+      <div class="section-head">
+        <div>
+          <h2>Short recap of Lesson 1</h2>
+          <p>Before using the concurrency package, students should anchor new ideas in what they already know.</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="icon">🧵</div>
+          <h3>How we created threads</h3>
+          <div class="code-tabs">
+            <button class="code-tab active" data-tab="recap-thread">Extend <code>Thread</code></button>
+            <button class="code-tab" data-tab="recap-runnable">Pass <code>Runnable</code></button>
+          </div>
+          <div class="code-panel active" id="recap-thread">
+<pre><code>class MyThread extends Thread {
+    @Override
+    public void run() {
+        System.out.println("work in " + getName());
+    }
+}
+
+Thread t = new MyThread();
+t.start();</code></pre>
+          </div>
+          <div class="code-panel" id="recap-runnable">
+<pre><code>Runnable job = () -&gt; {
+    System.out.println("work in "
+        + Thread.currentThread().getName());
+};
+
+Thread t = new Thread(job, "worker-1");
+t.start();</code></pre>
+          </div>
+          <div class="callout note"><strong>Reminder:</strong> in modern Java, passing a <code>Runnable</code> is usually preferred because it separates the task from the thread object.</div>
+        </div>
+
+        <div class="panel">
+          <div class="icon">🛡️</div>
+          <h3>How we handled shared state</h3>
+          <ul class="checklist">
+            <li>Protect methods used by multiple threads with <code>synchronized</code>.</li>
+            <li>Use thread-safe or concurrent collections when many threads touch the same structure.</li>
+            <li>Identify the critical section: the smallest block that must not interleave incorrectly.</li>
+          </ul>
+<pre style="margin-top:14px;"><code>public synchronized void increment() {
+    count++;
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="callout warn"><strong>Key transition:</strong> <code>synchronized</code> works, but it is a blunt tool. If you mark an instance method as <code>synchronized</code>, the lock is the whole object instance. That may be more locking than you really need.</div>
+    </section>
+
+    <section id="why-concurrent">
+      <div class="section-head">
+        <div>
+          <h2>Why <code>java.util.concurrent</code> exists</h2>
+          <p>The package gives us more expressive tools so we can match the synchronization technique to the actual problem.</p>
+        </div>
+      </div>
+
+      <div class="comparison-grid">
+        <div class="flow-graphic">
+          <h3>Coarse approach</h3>
+          <div class="flow-row">
+            <div class="flow-node">One object</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">One monitor lock</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">All synchronized methods wait</div>
+          </div>
+          <div class="callout warn">Simple, but unrelated operations may block each other just because they live on the same instance.</div>
+        </div>
+
+        <div class="flow-graphic">
+          <h3>Finer-grained approach</h3>
+          <div class="flow-row">
+            <div class="flow-node">Atomic counter</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">Explicit lock</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">Barrier / pool / future</div>
+          </div>
+          <div class="callout good">Each tool expresses a different intent: single-value update, controlled critical section, staged coordination, or asynchronous task execution.</div>
+        </div>
+      </div>
+
+      <table style="margin-top:18px;">
+        <thead>
+          <tr>
+            <th>Problem</th>
+            <th>Blunt fix</th>
+            <th>Finer tool</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Only one shared numeric counter</td>
+            <td><code>synchronized</code> method</td>
+            <td><code>AtomicInteger</code></td>
+          </tr>
+          <tr>
+            <td>Need timed lock attempts</td>
+            <td><code>synchronized</code> block only</td>
+            <td><code>ReentrantLock.tryLock()</code></td>
+          </tr>
+          <tr>
+            <td>Wait for N worker threads to finish startup</td>
+            <td>manual counting + wait/notify</td>
+            <td><code>CountDownLatch</code></td>
+          </tr>
+          <tr>
+            <td>Limit access to 3 identical resources</td>
+            <td>custom bookkeeping</td>
+            <td><code>Semaphore</code></td>
+          </tr>
+          <tr>
+            <td>Reuse a fixed team across repeated phases</td>
+            <td>lots of ad hoc coordination</td>
+            <td><code>CyclicBarrier</code> or <code>Phaser</code></td>
+          </tr>
+          <tr>
+            <td>Run many short tasks</td>
+            <td>create many raw threads</td>
+            <td><code>ExecutorService</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="atomic">
+      <div class="section-head">
+        <div>
+          <h2>The <code>java.util.concurrent.atomic</code> package</h2>
+          <p>Atomics are designed for shared values that need safe, lock-free updates. They are especially useful for counters, flags, sequence numbers, and simple state transitions.</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="icon">⚛️</div>
+          <h3>Main atomic classes</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>Typical use</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>AtomicInteger</code></td>
+                <td>Counters, IDs, inventory counts</td>
+              </tr>
+              <tr>
+                <td><code>AtomicLong</code></td>
+                <td>Larger counters and timestamps</td>
+              </tr>
+              <tr>
+                <td><code>AtomicBoolean</code></td>
+                <td>On/off flags, cancellation markers</td>
+              </tr>
+              <tr>
+                <td><code>AtomicReference&lt;T&gt;</code></td>
+                <td>Safely swap object references</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="callout note">Think of atomics as specialized tools for a small piece of shared state, not as a replacement for all locking.</div>
+        </div>
+
+        <div class="panel">
+          <div class="icon">🔁</div>
+          <h3>Common operations</h3>
+<pre><code>AtomicInteger count = new AtomicInteger(0);
+
+count.incrementAndGet();
+count.decrementAndGet();
+count.addAndGet(5);
+int value = count.get();
+count.set(42);
+
+boolean changed = count.compareAndSet(42, 43);</code></pre>
+          <div class="callout good"><strong>Big idea:</strong> <code>compareAndSet</code> lets you update the value only if it is still what you expected. That is the foundation of many lock-free algorithms.</div>
+        </div>
+      </div>
+
+      <div class="comparison-grid" style="margin-top:18px;">
+        <div class="panel">
+          <h3>Before: synchronized counter</h3>
+<pre><code>class VisitorCounter {
+    private int count = 0;
+
+    public synchronized int next() {
+        count++;
+        return count;
+    }
+}</code></pre>
+        </div>
+        <div class="panel">
+          <h3>After: atomic counter</h3>
+<pre><code>class VisitorCounter {
+    private final AtomicInteger count =
+        new AtomicInteger(0);
+
+    public int next() {
+        return count.incrementAndGet();
+    }
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-top:18px;">
+        <div class="info-card">
+          <div class="icon">✅</div>
+          <h3>Great use cases</h3>
+          <ul class="checklist">
+            <li>Simple counters</li>
+            <li>Sequence generators</li>
+            <li>One shared boolean flag</li>
+            <li>Replace one reference safely</li>
+          </ul>
+        </div>
+        <div class="info-card">
+          <div class="icon">⚠️</div>
+          <h3>Not enough when</h3>
+          <ul class="checklist">
+            <li>You must update multiple fields together</li>
+            <li>You need a bigger critical section</li>
+            <li>You must protect collection invariants</li>
+            <li>The operation is more than one shared value</li>
+          </ul>
+        </div>
+        <div class="info-card">
+          <div class="icon">🧠</div>
+          <h3>Thinking shortcut</h3>
+          <p>If the shared state is “just one value,” try atomic first. If the rule spans many values or a whole object state, think locks or concurrent collections.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="locks">
+      <div class="section-head">
+        <div>
+          <h2>The <code>java.util.concurrent.locks</code> package</h2>
+          <p>Explicit locks give us control that <code>synchronized</code> does not directly expose, such as timed lock attempts, manual unlock points, and multiple condition queues.</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="icon">🔒</div>
+          <h3>Basic <code>ReentrantLock</code> pattern</h3>
+<pre><code>private final Lock lock = new ReentrantLock();
+private int count = 0;
+
+public void increment() {
+    lock.lock();
+    try {
+        count++;
+    } finally {
+        lock.unlock();
+    }
+}</code></pre>
+          <div class="callout warn"><strong>Rule:</strong> always unlock in a <code>finally</code> block. Forgetting to unlock is a classic bug.</div>
+        </div>
+
+        <div class="panel">
+          <div class="icon">⚖️</div>
+          <h3><code>synchronized</code> vs <code>Lock</code></h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th><code>synchronized</code></th>
+                <th><code>ReentrantLock</code></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Syntax simplicity</td>
+                <td>Very simple</td>
+                <td>More verbose</td>
+              </tr>
+              <tr>
+                <td>Automatic unlock</td>
+                <td>Yes</td>
+                <td>No, must call <code>unlock()</code></td>
+              </tr>
+              <tr>
+                <td>Try without waiting forever</td>
+                <td>No direct equivalent</td>
+                <td><code>tryLock()</code></td>
+              </tr>
+              <tr>
+                <td>Interruptible waiting</td>
+                <td>Limited</td>
+                <td><code>lockInterruptibly()</code></td>
+              </tr>
+              <tr>
+                <td>Multiple conditions</td>
+                <td>One monitor wait set</td>
+                <td><code>Condition</code> objects</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:18px;">
+        <div class="panel">
+          <h3>Useful lock features</h3>
+          <div class="stack-steps">
+            <div class="step">
+              <strong><code>tryLock()</code></strong>
+              Ask for the lock and move on if it is not available right now.
+            </div>
+            <div class="step">
+              <strong><code>tryLock(timeout, unit)</code></strong>
+              Wait for a bounded amount of time instead of blocking forever.
+            </div>
+            <div class="step">
+              <strong><code>lockInterruptibly()</code></strong>
+              Useful when cancellation matters and a blocked thread should be able to give up.
+            </div>
+            <div class="step">
+              <strong><code>Condition</code></strong>
+              Explicit condition variables for workflows like “not empty” and “not full.”
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>When should you choose a lock?</h3>
+          <ul class="checklist">
+            <li>When <code>synchronized</code> is too rigid.</li>
+            <li>When you need more control over when to wait and when to back off.</li>
+            <li>When you want clearer coordination around several conditions.</li>
+            <li>When using advanced producer-consumer patterns later.</li>
+          </ul>
+          <div class="callout note">For many everyday cases, <code>synchronized</code> is still perfectly valid. The point is not that locks are always better. The point is that they solve different problems.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="readwritelock">
+      <div class="section-head">
+        <div>
+          <h2><code>ReentrantReadWriteLock</code>: separate locks for readers and writers</h2>
+          <p>A plain <code>ReentrantLock</code> lets only one thread in at a time — even if every thread just wants to read. <code>ReentrantReadWriteLock</code> fixes this by maintaining two coordinated locks: many readers may hold the read lock simultaneously, but a writer gets exclusive access.</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="icon">📖</div>
+          <h3>The core idea</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Situation</th>
+                <th>Allowed?</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Multiple threads reading at the same time</td>
+                <td>✅ Yes — readers do not block each other</td>
+              </tr>
+              <tr>
+                <td>One thread writing while others read</td>
+                <td>❌ No — writer waits for all readers to finish</td>
+              </tr>
+              <tr>
+                <td>Two threads writing at the same time</td>
+                <td>❌ No — writers are mutually exclusive</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="callout good">Best when reads are frequent and writes are rare — a read-heavy cache, a configuration store, or a leaderboard that is read thousands of times per second but updated occasionally.</div>
+        </div>
+
+        <div class="panel">
+          <div class="icon">🔑</div>
+          <h3>Basic pattern</h3>
+<pre><code>private final ReadWriteLock rwLock =
+    new ReentrantReadWriteLock();
+
+private final Lock readLock  = rwLock.readLock();
+private final Lock writeLock = rwLock.writeLock();
+
+private Map&lt;String, String&gt; cache = new HashMap&lt;&gt;();
+
+public String get(String key) {
+    readLock.lock();
+    try {
+        return cache.get(key);   // many threads at once
+    } finally {
+        readLock.unlock();
+    }
+}
+
+public void put(String key, String value) {
+    writeLock.lock();
+    try {
+        cache.put(key, value);   // exclusive access
+    } finally {
+        writeLock.unlock();
+    }
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:18px;">
+        <div class="panel">
+          <h3><code>ReentrantLock</code> vs <code>ReentrantReadWriteLock</code></h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th><code>ReentrantLock</code></th>
+                <th><code>ReentrantReadWriteLock</code></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Concurrent reads</td>
+                <td>No — one thread at a time</td>
+                <td>Yes — unlimited simultaneous readers</td>
+              </tr>
+              <tr>
+                <td>Exclusive writes</td>
+                <td>Yes</td>
+                <td>Yes</td>
+              </tr>
+              <tr>
+                <td>Complexity</td>
+                <td>Simple — one lock object</td>
+                <td>Two lock objects from one factory</td>
+              </tr>
+              <tr>
+                <td>Best when</td>
+                <td>Reads and writes are equally common</td>
+                <td>Reads vastly outnumber writes</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h3>Watch-outs</h3>
+          <div class="stack-steps">
+            <div class="step">
+              <strong>Writer starvation</strong>
+              If readers never stop arriving, a waiting writer may never get the lock. Some implementations support a fair mode (<code>new ReentrantReadWriteLock(true)</code>) to prevent this.
+            </div>
+            <div class="step">
+              <strong>No lock upgrading</strong>
+              A thread holding the read lock cannot upgrade to the write lock without releasing first. Attempting this causes a deadlock.
+            </div>
+            <div class="step">
+              <strong>Always unlock in <code>finally</code></strong>
+              The same rule as <code>ReentrantLock</code> — both the read lock and the write lock must be released in a <code>finally</code> block.
+            </div>
+          </div>
+          <div class="callout warn">If you are not sure whether reads dominate, stick with a plain <code>ReentrantLock</code>. The extra complexity of a read-write lock only pays off when the read-to-write ratio is high.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="synchronizers">
+      <div class="section-head">
+        <div>
+          <h2>Synchronizers: coordinating groups of threads</h2>
+          <p>Sometimes the problem is not “protect one variable.” Sometimes the real problem is “how do several threads wait for each other or share limited access?”</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="timeline-card">
+          <div class="icon">🚦</div>
+          <h3>The four synchronizers in this lesson</h3>
+          <ul class="timeline">
+            <li><strong><code>CountDownLatch</code></strong> — wait until a count reaches zero.</li>
+            <li><strong><code>Semaphore</code></strong> — allow only a limited number of threads through.</li>
+            <li><strong><code>CyclicBarrier</code></strong> — make a fixed group wait until everyone arrives.</li>
+            <li><strong><code>Phaser</code></strong> — like a more flexible, multi-phase barrier.</li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <div class="icon">🧭</div>
+          <h3>Mental model</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Tool</th>
+                <th>Picture in your head</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>CountDownLatch</code></td>
+                <td>A gate that opens once after N signals</td>
+              </tr>
+              <tr>
+                <td><code>Semaphore</code></td>
+                <td>A room with only a few seats</td>
+              </tr>
+              <tr>
+                <td><code>CyclicBarrier</code></td>
+                <td>A team meeting point at the end of each round</td>
+              </tr>
+              <tr>
+                <td><code>Phaser</code></td>
+                <td>A reusable stage manager for several rounds</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:18px;">
+        <div class="panel">
+          <h3><code>CountDownLatch</code></h3>
+<pre><code>CountDownLatch latch = new CountDownLatch(3);
+
+// worker threads call:
+latch.countDown();
+
+// coordinator thread calls:
+latch.await();</code></pre>
+          <ul class="checklist">
+            <li>Use it when one thread must wait for several other tasks to finish.</li>
+            <li>Typical examples: wait for startup, wait for three downloads, wait for test fixtures.</li>
+            <li>One-shot: once the count hits zero, it does not reset.</li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <h3><code>Semaphore</code></h3>
+<pre><code>Semaphore slots = new Semaphore(2);
+
+slots.acquire();
+try {
+    useSharedPrinter();
+} finally {
+    slots.release();
+}</code></pre>
+          <ul class="checklist">
+            <li>Use it when access should be limited, not exclusive.</li>
+            <li>Typical examples: 3 DB connections, 5 API tokens, 2 printers.</li>
+            <li>It models permits rather than ownership of one lock.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:18px;">
+        <div class="panel">
+          <h3><code>CyclicBarrier</code></h3>
+<pre><code>CyclicBarrier barrier = new CyclicBarrier(3);
+
+// each worker does part 1
+barrier.await();
+// now all three begin part 2</code></pre>
+          <ul class="checklist">
+            <li>Use it when a fixed team repeatedly meets at the same checkpoint.</li>
+            <li>Common in simulations, matrix work, and round-based processing.</li>
+            <li>Reusable after the barrier is tripped.</li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <h3><code>Phaser</code></h3>
+<pre><code>Phaser phaser = new Phaser(3);
+
+phaser.arriveAndAwaitAdvance();
+// phase 0 finished, move to phase 1
+phaser.arriveAndAwaitAdvance();
+// phase 1 finished, move to phase 2</code></pre>
+          <ul class="checklist">
+            <li>Best when work happens in several stages.</li>
+            <li>More flexible than <code>CyclicBarrier</code>.</li>
+            <li>Can register or deregister parties as the workflow changes.</li>
+          </ul>
+        </div>
+      </div>
+
+      <table style="margin-top:18px;">
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Best question it answers</th>
+            <th>Resettable?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>CountDownLatch</code></td>
+            <td>“Has the required number of tasks finished yet?”</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td><code>Semaphore</code></td>
+            <td>“How many threads may access this resource at once?”</td>
+            <td>Permits are reused</td>
+          </tr>
+          <tr>
+            <td><code>CyclicBarrier</code></td>
+            <td>“Has the whole team reached the checkpoint?”</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td><code>Phaser</code></td>
+            <td>“What phase are we in, and has everyone completed it?”</td>
+            <td>Yes, multi-phase</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Interactive coordination demo</h2>
+          <p>This mini simulation focuses on the behavior of the synchronizers rather than the full Java API details.</p>
+        </div>
+      </div>
+
+      <div class="demo-card sim-shell">
+        <div class="sim-header">
+          <div>
+            <h3 style="margin-bottom: 6px;">Synchronizer simulator</h3>
+            <p style="margin: 0; color: var(--muted);">Pick a synchronizer and see the coordination story it tells.</p>
+          </div>
+          <div class="sim-controls">
+            <button class="inline-btn pill-btn" id="latchBtn">CountDownLatch</button>
+            <button class="inline-btn pill-btn secondary" id="semBtn">Semaphore</button>
+            <button class="inline-btn pill-btn secondary" id="barrierBtn">CyclicBarrier</button>
+            <button class="inline-btn pill-btn secondary" id="phaserBtn">Phaser</button>
+            <button class="inline-btn pill-btn secondary" id="simResetBtn">Reset</button>
+          </div>
+        </div>
+
+        <div class="counter-box">
+          <div class="counter-card"><span>Tool</span><strong id="syncTool">Ready</strong></div>
+          <div class="counter-card"><span>Main idea</span><strong id="syncIdea">Choose one</strong></div>
+          <div class="counter-card"><span>Reuse</span><strong id="syncReuse">—</strong></div>
+        </div>
+
+        <div class="log" id="syncLog">Choose a synchronizer to see its behavior.</div>
+      </div>
+    </section>
+
+    <section id="executors">
+      <div class="section-head">
+        <div>
+          <h2>Thread pools and executors</h2>
+          <p>Creating raw threads for every task is expensive, noisy, and hard to manage. A thread pool lets a fixed set of worker threads reuse the cost of thread creation and process many tasks.</p>
+        </div>
+      </div>
+
+      <div class="comparison-grid">
+        <div class="panel">
+          <div class="icon">❌</div>
+          <h3>Raw-thread style</h3>
+<pre><code>for (Task task : tasks) {
+    new Thread(() -&gt; process(task)).start();
+}</code></pre>
+          <ul class="checklist">
+            <li>Creates many thread objects</li>
+            <li>Hard to limit concurrency</li>
+            <li>Hard to shut down cleanly</li>
+            <li>Harder to collect results</li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <div class="icon">✅</div>
+          <h3>Executor style</h3>
+<pre><code>ExecutorService pool =
+    Executors.newFixedThreadPool(4);
+
+for (Task task : tasks) {
+    pool.submit(() -&gt; process(task));
+}
+
+pool.shutdown();</code></pre>
+          <ul class="checklist">
+            <li>Reuses worker threads</li>
+            <li>Controls concurrency level</li>
+            <li>Cleaner shutdown model</li>
+            <li>Works with both <code>Runnable</code> and <code>Callable</code></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:18px;">
+        <div class="panel">
+          <h3>Common executor ideas</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Concept</th>
+                <th>Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>Executor</code></td>
+                <td>Very simple interface: just execute a task</td>
+              </tr>
+              <tr>
+                <td><code>ExecutorService</code></td>
+                <td>Adds lifecycle management, submission, shutdown, futures</td>
+              </tr>
+              <tr>
+                <td>Fixed thread pool</td>
+                <td>A stable number of workers</td>
+              </tr>
+              <tr>
+                <td>Task queue</td>
+                <td>Submitted work waits until a worker is free</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h3>Why thread pools are better</h3>
+          <ul class="checklist">
+            <li>You can bound the number of active threads.</li>
+            <li>You avoid creating a brand new thread for every tiny unit of work.</li>
+            <li>You centralize task execution.</li>
+            <li>You can reason about system load more easily.</li>
+            <li>You prepare students for server-side programming, where executors are everywhere.</li>
+          </ul>
+          <div class="callout note">A useful classroom line: threads are workers, executors are managers, and tasks are the jobs handed out to the workers.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="callable">
+      <div class="section-head">
+        <div>
+          <h2><code>Callable</code> and <code>Future</code></h2>
+          <p><code>Runnable</code> is great when the task just performs work. <code>Callable</code> is for tasks that return a value and may throw checked exceptions.</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="icon">📦</div>
+          <h3><code>Runnable</code> vs <code>Callable</code></h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Interface</th>
+                <th>Method</th>
+                <th>Returns value?</th>
+                <th>Checked exceptions?</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>Runnable</code></td>
+                <td><code>void run()</code></td>
+                <td>No</td>
+                <td>No</td>
+              </tr>
+              <tr>
+                <td><code>Callable&lt;T&gt;</code></td>
+                <td><code>T call()</code></td>
+                <td>Yes</td>
+                <td>Yes</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <div class="icon">⏳</div>
+          <h3>What is a <code>Future</code>?</h3>
+          <p>A <code>Future&lt;T&gt;</code> is a handle to a result that may not be ready yet.</p>
+          <ul class="checklist">
+            <li><code>get()</code> waits for the result</li>
+            <li><code>isDone()</code> checks whether the task finished</li>
+            <li><code>cancel(...)</code> requests cancellation</li>
+          </ul>
+          <div class="callout good">A future turns “start this in another thread” into “start this work and give me the answer later.”</div>
+        </div>
+      </div>
+
+      <div class="comparison-grid" style="margin-top:18px;">
+        <div class="panel">
+          <h3><code>Runnable</code> submission</h3>
+<pre><code>ExecutorService pool =
+    Executors.newFixedThreadPool(2);
+
+pool.submit(() -&gt; {
+    System.out.println("saving log entry");
+});</code></pre>
+        </div>
+        <div class="panel">
+          <h3><code>Callable</code> + <code>Future</code></h3>
+<pre><code>ExecutorService pool =
+    Executors.newFixedThreadPool(2);
+
+Future&lt;Integer&gt; future = pool.submit(() -&gt; {
+    return 21 + 21;
+});
+
+Integer answer = future.get();</code></pre>
+        </div>
+      </div>
+
+      <div class="callout warn">Important Note: <code>future.get()</code> blocks. If you call it immediately after every submission, you may accidentally turn concurrent code back into mostly sequential code.</div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>One practical storyline for the whole lesson</h2>
+          <p>Use the same mental scenario to connect all the APIs.</p>
+        </div>
+      </div>
+
+      <div class="mini-grid">
+        <div class="info-card">
+          <div class="icon">🧮</div>
+          <h3>Atomic</h3>
+          <p>Count how many tasks have been completed.</p>
+        </div>
+        <div class="info-card">
+          <div class="icon">🔐</div>
+          <h3>Lock</h3>
+          <p>Protect the shared priority queue while workers pull the next task.</p>
+        </div>
+        <div class="info-card">
+          <div class="icon">🚪</div>
+          <h3>Synchronizer</h3>
+          <p>Wait until all workers finish stage 1 before starting stage 2.</p>
+        </div>
+        <div class="info-card">
+          <div class="icon">🏭</div>
+          <h3>Executor + Future</h3>
+          <p>Run tasks in a pool and collect results after they complete.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Let's talk</h2>
+        </div>
+      </div>
+
+      <details>
+        <summary>Why not just use <code>synchronized</code> for everything?</summary>
+        <div style="padding-top: 12px; color: var(--muted);">Because it does not communicate intent very well for all problems. A semaphore says “limited permits.” A latch says “wait for N completions.” A future says “result later.” Those are easier to reason about than one giant lock.</div>
+      </details>
+
+      <details>
+        <summary>Do atomics replace locks?</summary>
+        <div style="padding-top: 12px; color: var(--muted);">No. Atomics are ideal for small independent shared values. If several fields must change together, or a whole data-structure invariant must be protected, you usually still need locking or a concurrent data structure.</div>
+      </details>
+
+      <details>
+        <summary>Why are executors such a big deal?</summary>
+        <div style="padding-top: 12px; color: var(--muted);">Because modern applications usually think in terms of tasks, not hand-managed thread objects. Executors let us submit work, bound resources, and gather results more cleanly.</div>
+      </details>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Quick knowledge check</h2>
+          <p>Pick the best answer.</p>
+        </div>
+      </div>
+
+      <div class="quiz-card">
+        <div class="icon">❓</div>
+        <h3>Which tool is the best fit if three worker threads must all finish phase 1 before any of them start phase 2?</h3>
+        <div class="mcq">
+          <label><input type="radio" name="q1" value="a"> <code>AtomicInteger</code></label>
+          <label><input type="radio" name="q1" value="b"> <code>Semaphore</code></label>
+          <label><input type="radio" name="q1" value="c"> <code>CyclicBarrier</code></label>
+          <label><input type="radio" name="q1" value="d"> <code>Future</code></label>
+        </div>
+        <div style="margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="inline-btn pill-btn" id="checkQuizBtn">Check answer</button>
+          <button class="inline-btn pill-btn secondary" id="resetQuizBtn">Reset</button>
+        </div>
+        <div class="mcq-result" id="quizResult"></div>
+      </div>
+    </section>
+
+    <section id="exercises">
+      <div class="section-head">
+        <div>
+          <h2>In-class exercises and homework</h2>
+        </div>
+      </div>
+
+      <div class="lesson-end-grid">
+        <div class="info-card">
+          <div class="icon">🧪</div>
+          <h3>In-class exercises</h3>
+          <ol>
+            <li><strong>AtomicTaskCounter</strong> — Refactor a <code>synchronized</code> counter to use <code>AtomicInteger</code> (<code>increment</code>, <code>decrement</code>, <code>reset</code>) with no <code>synchronized</code> keyword.</li>
+            <li><strong>WorkerStartupLatch</strong> — Use a <code>CountDownLatch</code> to make a coordinator thread block until a fixed number of worker threads have finished startup.</li>
+            <li><strong>PrinterRoom</strong> — Use a <code>Semaphore</code> to model a shared printer room where at most <em>N</em> print jobs may run concurrently.</li>
+            <li><strong>BatchTaskExecutor</strong> — Submit a list of tasks to a fixed <code>ExecutorService</code> thread pool and verify that at most <code>POOL_SIZE</code> distinct worker threads are ever created.</li>
+            <li><strong>ParallelSumCalculator</strong> — Split a list of integers across <em>N</em> <code>Callable&lt;Long&gt;</code> workers, collect all <code>Future</code> handles first, then retrieve results — keeping work truly concurrent.</li>
+            <li><strong>IndependentCounters</strong> — Replace a coarse per-instance <code>synchronized</code> method with two separate <code>ReentrantLock</code> fields so that reads and writes do not block each other.</li>
+          </ol>
+        </div>
+
+        <div class="info-card">
+          <div class="icon">🏠</div>
+          <h3>Homework</h3>
+          <ul class="checklist">
+            <li><strong>ExecutorTaskManager</strong> — Build an executor-backed task manager that:
+              <ul>
+                <li>Generates unique task IDs using an <code>AtomicInteger</code> (no <code>synchronized</code>).</li>
+                <li>Submits each task as a <code>Callable&lt;Task&gt;</code> to a fixed <code>ExecutorService</code> and returns the <code>Future&lt;Task&gt;</code>.</li>
+                <li>Collects completed tasks in an <code>ArrayList</code> protected by a <code>ReentrantLock</code>; add a comment explaining why the lock is necessary.</li>
+                <li>Provides <code>awaitAll(List&lt;Future&lt;Task&gt;&gt;)</code> to retrieve all results in submission order.</li>
+                <li>Provides a clean <code>shutdown()</code> that drains the pool.</li>
+                <li>In a Javadoc comment, explain which synchronizer you would add if batches of tasks had to fully complete before the next batch could start, and why.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer-note">Next lesson direction: blocking queues, producer-consumer, and how concurrent data structures support scalable task processing.</p>
+  </main>
+
+  <script>
+    const codeTabs = document.querySelectorAll('.code-tab');
+    const codePanels = document.querySelectorAll('.code-panel');
+
+    codeTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const container = tab.closest('.panel');
+        const localTabs = container.querySelectorAll('.code-tab');
+        const localPanels = container.querySelectorAll('.code-panel');
+        localTabs.forEach(t => t.classList.remove('active'));
+        localPanels.forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        const target = container.querySelector('#' + tab.dataset.tab);
+        if (target) target.classList.add('active');
+      });
+    });
+
+    const syncTool = document.getElementById('syncTool');
+    const syncIdea = document.getElementById('syncIdea');
+    const syncReuse = document.getElementById('syncReuse');
+    const syncLog = document.getElementById('syncLog');
+
+    function setMode(name, idea, reuse, lines) {
+      syncTool.textContent = name;
+      syncIdea.textContent = idea;
+      syncReuse.textContent = reuse;
+      syncLog.textContent = lines.join('\n');
+    }
+
+    document.getElementById('latchBtn').addEventListener('click', () => {
+      setMode('CountDownLatch', 'Wait for completions', 'One-shot', [
+        'Coordinator creates latch with count = 3',
+        'Worker A finishes startup and calls countDown()',
+        'Worker B finishes startup and calls countDown()',
+        'Worker C finishes startup and calls countDown()',
+        'Count reaches 0',
+        'Coordinator thread unblocks and continues'
+      ]);
+    });
+
+    document.getElementById('semBtn').addEventListener('click', () => {
+      setMode('Semaphore', 'Limit concurrent access', 'Permits reused', [
+        'Semaphore starts with 2 permits',
+        'Thread A acquires permit 1',
+        'Thread B acquires permit 2',
+        'Thread C must wait because no permit is free',
+        'Thread A releases permit',
+        'Thread C acquires released permit and continues'
+      ]);
+    });
+
+    document.getElementById('barrierBtn').addEventListener('click', () => {
+      setMode('CyclicBarrier', 'Meet at a checkpoint', 'Reusable', [
+        'Three workers process phase 1',
+        'Worker A arrives at barrier and waits',
+        'Worker B arrives at barrier and waits',
+        'Worker C arrives at barrier',
+        'Barrier trips because all 3 arrived',
+        'All workers begin phase 2 together'
+      ]);
+    });
+
+    document.getElementById('phaserBtn').addEventListener('click', () => {
+      setMode('Phaser', 'Advance through stages', 'Reusable across phases', [
+        'Phase 0: all parties perform setup work',
+        'All parties arrive, phase advances to 1',
+        'Phase 1: all parties perform processing work',
+        'One party deregisters because it is done',
+        'Remaining parties arrive, phase advances to 2',
+        'Flexible staged workflow continues'
+      ]);
+    });
+
+    document.getElementById('simResetBtn').addEventListener('click', () => {
+      syncTool.textContent = 'Ready';
+      syncIdea.textContent = 'Choose one';
+      syncReuse.textContent = '—';
+      syncLog.textContent = 'Choose a synchronizer to see its behavior.';
+    });
+
+    const checkQuizBtn = document.getElementById('checkQuizBtn');
+    const resetQuizBtn = document.getElementById('resetQuizBtn');
+    const quizResult = document.getElementById('quizResult');
+
+    checkQuizBtn.addEventListener('click', () => {
+      const selected = document.querySelector('input[name="q1"]:checked');
+      if (!selected) {
+        quizResult.className = 'mcq-result show nope';
+        quizResult.textContent = 'Choose an answer first.';
+        return;
+      }
+      if (selected.value === 'c') {
+        quizResult.className = 'mcq-result show ok';
+        quizResult.textContent = 'Correct. A CyclicBarrier is designed for a fixed group that must all reach the same checkpoint before continuing.';
+      } else {
+        quizResult.className = 'mcq-result show nope';
+        quizResult.textContent = 'Not quite. The best fit here is CyclicBarrier, because the whole group must wait at the end of phase 1 before starting phase 2.';
+      }
+    });
+
+    resetQuizBtn.addEventListener('click', () => {
+      const selected = document.querySelector('input[name="q1"]:checked');
+      if (selected) selected.checked = false;
+      quizResult.className = 'mcq-result';
+      quizResult.textContent = '';
+    });
+  </script>
+</body>
+</html>

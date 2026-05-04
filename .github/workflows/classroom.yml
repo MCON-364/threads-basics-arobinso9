@@ -1,4 +1,4 @@
-name: GitHub Classroom Workflow
+name: Autograding Tests
 
 on:
   push:
@@ -7,8 +7,13 @@ on:
     branches: [ main, develop ]
   workflow_dispatch:
 
+permissions:
+  checks: write
+  actions: read
+  contents: read
+
 jobs:
-  autograding:
+  autograde:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,14 +26,157 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Run Autograder
-        id: run-tests
-        uses: education/autograding@v1
-
-      - name: Autograding Reporter
-        uses: education/autograding-grading-reporter@v1
-        if: always()
-        env:
-          RUN-TESTS_RESULTS: "${{steps.run-tests.outcome}}"
+      # ── Lesson 1 Exercises (5 × 15 = 75 pts) ────────────────────────────────
+      - name: ThreadSafeTaskCounter
+        id: thread-safe-task-counter
+        uses: classroom-resources/autograding-command-grader@v1
         with:
-          runners: run-tests
+          test-name: "ThreadSafeTaskCounter"
+          setup-command: ""
+          command: "mvn -B -ntp test -Dtest=ThreadSafeTaskCounterTest"
+          timeout: 10
+          max-score: 15
+
+      - name: TaskWorker
+        id: task-worker
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: "TaskWorker"
+          setup-command: ""
+          command: "mvn -B -ntp test -Dtest=TaskWorkerTest"
+          timeout: 10
+          max-score: 15
+
+      - name: SharedTaskList
+        id: shared-task-list
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: "SharedTaskList"
+          setup-command: ""
+          command: "mvn -B -ntp test -Dtest=SharedTaskListTest"
+          timeout: 10
+          max-score: 15
+
+      - name: PeriodicLogger
+        id: periodic-logger
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: "PeriodicLogger"
+          setup-command: ""
+          command: "mvn -B -ntp test -Dtest=PeriodicLoggerTest"
+          timeout: 10
+          max-score: 15
+
+      - name: LambdaRunnableExercise
+        id: lambda-runnable-exercise
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: "LambdaRunnableExercise"
+          setup-command: ""
+          command: "mvn -B -ntp test -Dtest=LambdaRunnableExerciseTest"
+          timeout: 10
+          max-score: 15
+
+      # ── Lesson 1 Homework (1 × 25 = 25 pts) ─────────────────────────────────
+      - name: TaskRegistry
+        id: task-registry
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: "TaskRegistry"
+          setup-command: ""
+          command: "mvn -B -ntp test -Dtest=TaskRegistryTest"
+          timeout: 10
+          max-score: 25
+
+      # ── Lesson 2 Exercises (6 × 20 = 120 pts) ───────────────────────────────
+      - name: AtomicTaskCounter
+        id: atomic-task-counter
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: "AtomicTaskCounter"
+          setup-command: ""
+          command: "mvn -B -ntp test -Dtest=AtomicTaskCounterTest"
+          timeout: 10
+          max-score: 20
+
+      - name: WorkerStartupLatch
+        id: worker-startup-latch
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: "WorkerStartupLatch"
+          setup-command: ""
+          command: "mvn -B -ntp test -Dtest=WorkerStartupLatchTest"
+          timeout: 10
+          max-score: 20
+
+      - name: PrinterRoom
+        id: printer-room
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: "PrinterRoom"
+          setup-command: ""
+          command: "mvn -B -ntp test -Dtest=PrinterRoomTest"
+          timeout: 10
+          max-score: 20
+
+      - name: BatchTaskExecutor
+        id: batch-task-executor
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: "BatchTaskExecutor"
+          setup-command: ""
+          command: "mvn -B -ntp test -Dtest=BatchTaskExecutorTest"
+          timeout: 10
+          max-score: 20
+
+      - name: ParallelSumCalculator
+        id: parallel-sum-calculator
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: "ParallelSumCalculator"
+          setup-command: ""
+          command: "mvn -B -ntp test -Dtest=ParallelSumCalculatorTest"
+          timeout: 10
+          max-score: 20
+
+      - name: IndependentCounters
+        id: independent-counters
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: "IndependentCounters"
+          setup-command: ""
+          command: "mvn -B -ntp test -Dtest=IndependentCountersTest"
+          timeout: 10
+          max-score: 20
+
+      # ── Lesson 2 Homework (1 × 25 = 25 pts) ─────────────────────────────────
+      - name: ExecutorTaskManager
+        id: executor-task-manager
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: "ExecutorTaskManager"
+          setup-command: ""
+          command: "mvn -B -ntp test -Dtest=ExecutorTaskManagerTest"
+          timeout: 30
+          max-score: 25
+
+      # ── Reporter ─────────────────────────────────────────────────────────────
+      - name: Autograding Reporter
+        if: always()
+        uses: classroom-resources/autograding-grading-reporter@v1
+        env:
+          THREAD-SAFE-TASK-COUNTER_RESULTS: "${{ steps.thread-safe-task-counter.outputs.result }}"
+          TASK-WORKER_RESULTS: "${{ steps.task-worker.outputs.result }}"
+          SHARED-TASK-LIST_RESULTS: "${{ steps.shared-task-list.outputs.result }}"
+          PERIODIC-LOGGER_RESULTS: "${{ steps.periodic-logger.outputs.result }}"
+          LAMBDA-RUNNABLE-EXERCISE_RESULTS: "${{ steps.lambda-runnable-exercise.outputs.result }}"
+          TASK-REGISTRY_RESULTS: "${{ steps.task-registry.outputs.result }}"
+          ATOMIC-TASK-COUNTER_RESULTS: "${{ steps.atomic-task-counter.outputs.result }}"
+          WORKER-STARTUP-LATCH_RESULTS: "${{ steps.worker-startup-latch.outputs.result }}"
+          PRINTER-ROOM_RESULTS: "${{ steps.printer-room.outputs.result }}"
+          BATCH-TASK-EXECUTOR_RESULTS: "${{ steps.batch-task-executor.outputs.result }}"
+          PARALLEL-SUM-CALCULATOR_RESULTS: "${{ steps.parallel-sum-calculator.outputs.result }}"
+          INDEPENDENT-COUNTERS_RESULTS: "${{ steps.independent-counters.outputs.result }}"
+          EXECUTOR-TASK-MANAGER_RESULTS: "${{ steps.executor-task-manager.outputs.result }}"
+        with:
+          runners: thread-safe-task-counter,task-worker,shared-task-list,periodic-logger,lambda-runnable-exercise,task-registry,atomic-task-counter,worker-startup-latch,printer-room,batch-task-executor,parallel-sum-calculator,independent-counters,executor-task-manager

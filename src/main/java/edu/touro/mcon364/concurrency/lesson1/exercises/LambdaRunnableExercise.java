@@ -51,6 +51,16 @@ public class LambdaRunnableExercise {
     public void launchLoggerThread(List<String> log, String message) throws InterruptedException {
         // TODO: create a Runnable lambda, pass it to new Thread(..., "logger"),
         //       start the thread, join it, and store the message in loggedMessage.
+
+        // we first define the lambda and store it in a variable
+        Runnable r = () -> {
+            log.add(message);
+            this.loggedMessage = message;
+        };
+
+        Thread t = new Thread(r, "logger"); // we create the thread
+        t.start();
+        t.join();
     }
 
     /**
@@ -62,7 +72,55 @@ public class LambdaRunnableExercise {
     public void launchTwoCounterThreads(List<Task> tasks) throws InterruptedException {
         // TODO: create two threads using inline lambda syntax, start both,
         //       join both, and store results in highCount and lowCount.
+
+        // with streams:
+        // Thread A: Using Stream to filter and count HIGH priority
+        Thread t1 = new Thread(() -> {
+            this.highCount = (int) tasks.stream()
+                    .filter(task -> task.priority() == Priority.HIGH)
+                    .count();
+        }, "counter-a");
+
+        // Thread B: Using Stream to filter and count LOW priority
+        Thread t2 = new Thread(() -> {
+            this.lowCount = (int) tasks.stream()
+                    .filter(task -> task.priority() == Priority.LOW)
+                    .count();
+        }, "counter-b");
+
+        // start both threads
+        t1.start();
+        t2.start();
+
+        // we join both to ensure counts are finished before the method returns
+        t1.join();
+        t2.join();
     }
+    /*
+     with loop:
+         // Thread A: Count HIGH priority
+        Thread t1 = new Thread(() -> {
+            int count = 0;
+            for (Task task : tasks) {
+                if (task.priority() == Priority.HIGH) {
+                    count++;
+                }
+            }
+            this.highCount = count;
+        }, "counter-a");
+
+        // Thread B: Count LOW priority
+        Thread t2 = new Thread(() -> {
+            int count = 0;
+            for (Task task : tasks) {
+                if (task.priority() == Priority.LOW) {
+                    count++;
+                }
+            }
+            this.lowCount = count;
+        }, "counter-b");
+
+     */
 
     public String getLoggedMessage() { return loggedMessage; }
     public int getHighCount()        { return highCount; }
